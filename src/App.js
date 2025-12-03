@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key } from 'lucide-react';
 // API Base URL - update this to your backend URL
-const API_BASE_URL = 'http://cipher.thepaytrix.com/api';
+const API_BASE_URL = 'https://cipher.thepaytrix.com/api';
 // JWT Token Validation Helper - Simplified for JWE tokens
 const isTokenValid = (token) => {
   // For encrypted tokens (JWE), we can't decode them client-side
@@ -408,7 +408,7 @@ const validateForm = () => {
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Demo credentials: admin / admin123</p>
+            <p>BETA V1</p>
           </div>
         </div>
       </div>
