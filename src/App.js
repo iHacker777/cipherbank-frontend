@@ -444,7 +444,7 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, setUser, se
         <Header user={user} setIsMenuOpen={setIsMenuOpen} />
         <main className="p-6 lg:p-8">
           {currentView === 'dashboard' && <Dashboard token={token} showNotification={showNotification} />}
-          {currentView === 'upload' && <UploadView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} />}
+          {currentView === 'upload' && <UploadView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} user={user} />}
           {currentView === 'statements' && <StatementsView token={token} showNotification={showNotification} />}
           {currentView === 'users' && <UserManagementView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} />}
           {currentView === 'changepassword' && <ChangePasswordView token={token} user={user} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} />}
@@ -723,14 +723,15 @@ const Dashboard = ({ token, showNotification }) => {
 };
 
 // Upload View
-const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken }) => {
+const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken, user }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadData, setUploadData] = useState({
-    parserKey: 'iob',
-    username: 'admin',
-    accountNo: '',
-    file: null
+      parserKey: 'iob',
+      username: user?.username || 'admin',  // Use logged-in user's username
+      accountNo: '',
+      file: null
   });
+
   const [uploading, setUploading] = useState(false);
 
   const handleDragOver = (e) => {
