@@ -2,12 +2,12 @@ name: CipherBank Frontend - Blue/Green Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [ release ]  # ← FIXED: Changed from 'main' to 'release'
     paths:
       - 'src/**'
       - 'public/**'
       - 'package.json'
-      - '.github/workflows/cipherbank-frontend-deploy.yml'
+      - '.github/workflows/deploy.yml'  # ← FIXED: Changed from 'cipherbank-frontend-deploy.yml'
   workflow_dispatch:
 
 env:
@@ -64,7 +64,7 @@ jobs:
           📊 <b>Build Info</b>
           • Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
           • Author: ${{ steps.vars.outputs.AUTHOR }}
-          • Version: ${{ steps.vars.outputs.VERSION }}
+          • Version: ${ steps.vars.outputs.VERSION }}
           • Time: ${{ steps.vars.outputs.BUILD_TIME }}
           
           💬 <i>${{ steps.vars.outputs.COMMIT_MSG }}</i>
