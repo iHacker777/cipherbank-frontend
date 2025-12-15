@@ -56,7 +56,7 @@ jobs:
       
       - name: Notify Deployment Start
         run: |
-          MESSAGE="<b>CipherBank Frontend - Deployment Started</b>
+          MESSAGE="<b>🚀 CipherBank Frontend - Deployment Started</b>
 
           <b>Build Information</b>
           Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
@@ -86,6 +86,7 @@ jobs:
         env:
           CI: false
           GENERATE_SOURCEMAP: false
+          REACT_APP_API_URL: ${{ env.REACT_APP_API_URL }}
         run: |
           echo "Starting React build..."
           npm run build
@@ -104,7 +105,7 @@ jobs:
       - name: Notify Build Complete
         if: success()
         run: |
-          MESSAGE="<b>Build Completed</b>
+          MESSAGE="<b>✅ Build Completed</b>
           Size: ${{ steps.build.outputs.build_size }}
           Files: ${{ steps.build.outputs.file_count }}
 
@@ -222,16 +223,19 @@ jobs:
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'ENDSSH'
             REWRITE_FILE="/www/server/panel/vhost/rewrite/cipher.thepaytrix.com.conf"
             
-            # Create SPA rewrite rule if it doesn't exist
             if ! grep -q "try_files" "$REWRITE_FILE" 2>/dev/null; then
               echo "Adding SPA routing configuration..."
-              sudo tee "$REWRITE_FILE" > /dev/null << 'EOFNGINX'
-location / {
-    try_files $uri $uri/ /index.html;
-}
-EOFNGINX
-              sudo nginx -t && sudo nginx -s reload
-              echo "SPA routing configured successfully"
+              echo "location / {" | sudo tee "$REWRITE_FILE" > /dev/null
+              echo "    try_files \$uri \$uri/ /index.html;" | sudo tee -a "$REWRITE_FILE" > /dev/null
+              echo "}" | sudo tee -a "$REWRITE_FILE" > /dev/null
+              
+              if sudo nginx -t 2>&1 | grep -q "successful"; then
+                sudo nginx -s reload
+                echo "SPA routing configured successfully"
+              else
+                echo "ERROR: Nginx configuration test failed"
+                exit 1
+              fi
             else
               echo "SPA routing already configured"
             fi
@@ -243,8 +247,6 @@ EOFNGINX
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'ENDSSH'
-            set -e
-            
             DEPLOY_DIR="${{ env.NGINX_ROOT }}/${{ steps.detect_version.outputs.deploy_version }}"
             CURRENT_LINK="${{ env.NGINX_ROOT }}/current"
             
@@ -264,29 +266,51 @@ EOFNGINX
               exit 1
             fi
             
-            sudo nginx -s reload
-            echo "Nginx reloaded successfully"
+            if sudo nginx -t 2>&1 | grep -q "successful"; then
+              sudo nginx -s reload
+              echo "Nginx reloaded successfully"
+            else
+              echo "ERROR: Nginx configuration test failed"
+              sudo cp -P "${CURRENT_LINK}.backup" "$CURRENT_LINK" 2>/dev/null || true
+              exit 1
+            fi
           ENDSSH
       
       - name: Verify Website Accessibility
         run: |
-          sleep 3
+          sleep 5
           
           echo "Testing website accessibility..."
           
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://cipher.thepaytrix.com/ || echo "000")
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          SUCCESS=false
           
-          if [ "$RESPONSE" = "200" ]; then
-            echo "Website accessible (HTTP $RESPONSE)"
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://cipher.thepaytrix.com/ 2>/dev/null || echo "000")
             
-            CONTENT=$(curl -s https://cipher.thepaytrix.com/ | head -n 20)
-            if [[ "$CONTENT" == *"CipherBank"* ]] || [[ "$CONTENT" == *"<!DOCTYPE html>"* ]]; then
-              echo "Content verification passed"
+            if [ "$RESPONSE" = "200" ]; then
+              echo "Website accessible (HTTP $RESPONSE)"
+              
+              CONTENT=$(curl -s https://cipher.thepaytrix.com/ 2>/dev/null | head -n 20)
+              if [[ "$CONTENT" == *"CipherBank"* ]] || [[ "$CONTENT" == *"<!DOCTYPE html>"* ]] || [[ "$CONTENT" == *"<html"* ]]; then
+                echo "Content verification passed"
+                SUCCESS=true
+                break
+              else
+                echo "WARNING: Expected content not found, but site is accessible"
+                SUCCESS=true
+                break
+              fi
             else
-              echo "WARNING: Expected content not found, but site is accessible"
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "Attempt $RETRY_COUNT/$MAX_RETRIES failed (HTTP $RESPONSE), retrying in 3s..."
+              sleep 3
             fi
-          else
-            echo "ERROR: Website accessibility test failed (HTTP $RESPONSE)"
+          done
+          
+          if [ "$SUCCESS" = false ]; then
+            echo "ERROR: Website accessibility test failed after $MAX_RETRIES attempts"
             exit 1
           fi
       
@@ -297,7 +321,7 @@ EOFNGINX
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'ENDSSH'
             if [ "${{ steps.detect_version.outputs.active_version }}" != "none" ]; then
               OLD_DIR="${{ env.NGINX_ROOT }}/${{ steps.detect_version.outputs.active_version }}"
-              echo "Keeping $OLD_DIR for potential rollback"
+              echo "Keeping $OLD_DIR for potential rollback (will be cleaned on next deployment)"
             fi
           ENDSSH
       
@@ -367,7 +391,7 @@ EOFNGINX
             
             DEPLOY_DIR="${{ env.NGINX_ROOT }}/${{ steps.detect_version.outputs.deploy_version }}"
             if [ -d "$DEPLOY_DIR" ]; then
-              sudo find "$DEPLOY_DIR" -mindepth 1 -delete
+              sudo find "$DEPLOY_DIR" -mindepth 1 -delete 2>/dev/null || true
               echo "Failed deployment cleaned"
             fi
             
