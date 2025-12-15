@@ -154,7 +154,17 @@ jobs:
             
             if [ -d "$DEPLOY_DIR" ]; then
               echo "Cleaning deployment directory..."
-              sudo find "$DEPLOY_DIR" -mindepth 1 -delete
+              
+              # Remove immutable attribute from .user.ini if it exists
+              if [ -f "$DEPLOY_DIR/.user.ini" ]; then
+                sudo chattr -i "$DEPLOY_DIR/.user.ini" 2>/dev/null || true
+              fi
+              
+              # Clean all files except .user.ini
+              sudo find "$DEPLOY_DIR" -mindepth 1 ! -name '.user.ini' -delete 2>/dev/null || true
+              
+              # Remove .user.ini separately
+              sudo rm -f "$DEPLOY_DIR/.user.ini" 2>/dev/null || true
             fi
             
             sudo chown -R ${{ env.SSH_USER }}:${{ env.SSH_USER }} "$DEPLOY_DIR"
@@ -391,6 +401,12 @@ jobs:
             
             DEPLOY_DIR="${{ env.NGINX_ROOT }}/${{ steps.detect_version.outputs.deploy_version }}"
             if [ -d "$DEPLOY_DIR" ]; then
+              # Remove immutable attribute from .user.ini if it exists
+              if [ -f "$DEPLOY_DIR/.user.ini" ]; then
+                sudo chattr -i "$DEPLOY_DIR/.user.ini" 2>/dev/null || true
+              fi
+              
+              # Clean all files
               sudo find "$DEPLOY_DIR" -mindepth 1 -delete 2>/dev/null || true
               echo "Failed deployment cleaned"
             fi
