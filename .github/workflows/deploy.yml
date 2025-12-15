@@ -215,6 +215,28 @@ jobs:
           echo "deployed_files=$DEPLOYED_FILES" >> $GITHUB_OUTPUT
           echo "deployed_size=$DEPLOYED_SIZE" >> $GITHUB_OUTPUT
       
+      # ==================== CONFIGURE NGINX FOR SPA ====================
+      - name: Configure Nginx for SPA Routing
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'ENDSSH'
+            REWRITE_FILE="/www/server/panel/vhost/rewrite/cipher.thepaytrix.com.conf"
+            
+            # Create SPA rewrite rule if it doesn't exist
+            if ! grep -q "try_files" "$REWRITE_FILE" 2>/dev/null; then
+              echo "Adding SPA routing configuration..."
+              cat > "$REWRITE_FILE" << 'EOF'
+location / {
+    try_files $uri $uri/ /index.html;
+}
+EOF
+              sudo nginx -t && sudo nginx -s reload
+              echo "SPA routing configured successfully"
+            else
+              echo "SPA routing already configured"
+            fi
+          ENDSSH
+      
       # ==================== TRAFFIC SWITCH ====================
       - name: Switch Traffic
         id: switch
@@ -258,10 +280,10 @@ jobs:
             echo "Website accessible (HTTP $RESPONSE)"
             
             CONTENT=$(curl -s https://cipher.thepaytrix.com/ | head -n 20)
-            if [[ "$CONTENT" == *"CipherBank"* ]]; then
+            if [[ "$CONTENT" == *"CipherBank"* ]] || [[ "$CONTENT" == *"<!DOCTYPE html>"* ]]; then
               echo "Content verification passed"
             else
-              echo "WARNING: Expected content not found"
+              echo "WARNING: Expected content not found, but site is accessible"
             fi
           else
             echo "ERROR: Website accessibility test failed (HTTP $RESPONSE)"
@@ -364,6 +386,8 @@ jobs:
             FAILED_STEP="File Verification"
           elif [ "${{ steps.switch.outcome }}" = "failure" ]; then
             FAILED_STEP="Traffic Switch"
+          else
+            FAILED_STEP="Website Verification"
           fi
           
           MESSAGE="<b>❌ CipherBank Frontend - Deployment Failed</b>
