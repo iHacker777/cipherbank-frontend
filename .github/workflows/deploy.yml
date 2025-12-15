@@ -2,12 +2,12 @@ name: CipherBank Frontend - Blue/Green Deploy
 
 on:
   push:
-    branches: [ release ]  # ← FIXED: Changed from 'main' to 'release'
+    branches: [ release ]
     paths:
       - 'src/**'
       - 'public/**'
       - 'package.json'
-      - '.github/workflows/deploy.yml'  # ← FIXED: Changed from 'cipherbank-frontend-deploy.yml'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 env:
@@ -27,64 +27,65 @@ jobs:
     
     steps:
       # ==================== INITIALIZATION ====================
-      - name: 📦 Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
-      - name: 🔧 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
       
-      - name: 🔑 Setup SSH
+      - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ env.SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts
       
-      - name: 📝 Set Build Variables
+      - name: Set Build Variables
         id: vars
         run: |
           echo "BUILD_TIME=$(date +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
           echo "COMMIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "COMMIT_MSG=$(git log -1 --pretty=%B | head -n1)" >> $GITHUB_OUTPUT
-          echo "AUTHOR=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
+          echo "COMMIT_MSG=$(git log -1 --pretty=%B | head -n1 | sed 's/[<>]//g')" >> $GITHUB_OUTPUT
+          echo "AUTHOR=$(git log -1 --pretty=format:'%an' | sed 's/[<>]//g')" >> $GITHUB_OUTPUT
           echo "VERSION=$(date +'%Y%m%d-%H%M%S')-${{ github.run_number }}" >> $GITHUB_OUTPUT
       
-      - name: 📢 Notify Deployment Start
+      - name: Notify Deployment Start
         run: |
           curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
-            -d text="🎨 <b>CipherBank Frontend Deployment Started</b>
-          
-          📊 <b>Build Info</b>
-          • Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
-          • Author: ${{ steps.vars.outputs.AUTHOR }}
-          • Version: ${ steps.vars.outputs.VERSION }}
-          • Time: ${{ steps.vars.outputs.BUILD_TIME }}
-          
-          💬 <i>${{ steps.vars.outputs.COMMIT_MSG }}</i>
-          
-          ⏳ Installing dependencies..."
+            -d text="<b>CipherBank Frontend - Deployment Started</b>
+
+<b>Build Information</b>
+Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
+Author: ${{ steps.vars.outputs.AUTHOR }}
+Version: ${{ steps.vars.outputs.VERSION }}
+Time: ${{ steps.vars.outputs.BUILD_TIME }}
+
+<b>Commit Message</b>
+${{ steps.vars.outputs.COMMIT_MSG }}
+
+<b>Status:</b> Installing dependencies..."
       
       # ==================== BUILD ====================
-      - name: 📦 Install Dependencies
+      - name: Install Dependencies
         run: |
-          echo "📦 Installing npm packages..."
+          echo "Installing npm packages..."
           npm ci
-          echo "✅ Dependencies installed"
+          echo "Dependencies installed successfully"
       
-      - name: 🏗️ Build React App
+      - name: Build React App
         id: build
         env:
-          CI: false  # Treat warnings as warnings, not errors
-          GENERATE_SOURCEMAP: false  # Don't generate source maps in production
+          CI: false
+          GENERATE_SOURCEMAP: false
         run: |
-          echo "🔨 Starting React build..."
+          echo "Starting React build..."
           npm run build
           
           if [ $? -eq 0 ] && [ -d "build" ]; then
@@ -92,25 +93,26 @@ jobs:
             FILE_COUNT=$(find build -type f | wc -l)
             echo "build_size=$BUILD_SIZE" >> $GITHUB_OUTPUT
             echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
-            echo "✅ Build successful: $FILE_COUNT files ($BUILD_SIZE)"
+            echo "Build successful: $FILE_COUNT files ($BUILD_SIZE)"
           else
-            echo "❌ Build failed"
+            echo "Build failed"
             exit 1
           fi
       
-      - name: 📢 Notify Build Complete
+      - name: Notify Build Complete
         if: success()
         run: |
           curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
-            -d text="✅ Build completed
-          • Size: ${{ steps.build.outputs.build_size }}
-          • Files: ${{ steps.build.outputs.file_count }}
-          • Uploading to server..."
+            -d text="<b>Build Completed</b>
+Size: ${{ steps.build.outputs.build_size }}
+Files: ${{ steps.build.outputs.file_count }}
+
+<b>Status:</b> Uploading to server..."
       
       # ==================== DETECT ACTIVE VERSION ====================
-      - name: 🎨 Detect Active Version
+      - name: Detect Active Version
         id: detect_version
         run: |
           CURRENT_LINK=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
@@ -131,11 +133,11 @@ jobs:
           echo "active_version=$ACTIVE_VERSION" >> $GITHUB_OUTPUT
           echo "deploy_version=$DEPLOY_VERSION" >> $GITHUB_OUTPUT
           
-          echo "🎯 Active: $ACTIVE_VERSION"
-          echo "🎯 Deploying to: $DEPLOY_VERSION"
+          echo "Active version: $ACTIVE_VERSION"
+          echo "Deploying to: $DEPLOY_VERSION"
       
       # ==================== PREPARE DEPLOYMENT ====================
-      - name: 📁 Prepare Deployment Directory
+      - name: Prepare Deployment Directory
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'ENDSSH'
@@ -143,34 +145,29 @@ jobs:
             
             DEPLOY_DIR="${{ env.NGINX_ROOT }}/${{ steps.detect_version.outputs.deploy_version }}"
             
-            # Create deployment directory
             sudo mkdir -p "$DEPLOY_DIR"
             
-            # Clean existing files (but keep directory)
             if [ -d "$DEPLOY_DIR" ]; then
-              echo "🧹 Cleaning $DEPLOY_DIR..."
+              echo "Cleaning deployment directory..."
               sudo find "$DEPLOY_DIR" -mindepth 1 -delete
             fi
             
-            # Set proper ownership
             sudo chown -R ${{ env.SSH_USER }}:${{ env.SSH_USER }} "$DEPLOY_DIR"
             
-            echo "✅ Deployment directory ready: $DEPLOY_DIR"
+            echo "Deployment directory ready: $DEPLOY_DIR"
           ENDSSH
       
-      - name: 📤 Upload Build to Server
+      - name: Upload Build to Server
         run: |
-          echo "📤 Uploading build files..."
-          
-          # Create temporary archive
+          echo "Creating build archive..."
           tar -czf build.tar.gz -C build .
           
-          # Upload archive
+          echo "Uploading to server..."
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             build.tar.gz \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:/tmp/frontend-build.tar.gz
           
-          # Extract on server
+          echo "Extracting on server..."
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'ENDSSH'
             DEPLOY_DIR="${{ env.NGINX_ROOT }}/${{ steps.detect_version.outputs.deploy_version }}"
@@ -180,15 +177,14 @@ jobs:
             sudo find "$DEPLOY_DIR" -type f -exec chmod 644 {} \;
             sudo find "$DEPLOY_DIR" -type d -exec chmod 755 {} \;
             
-            # Cleanup
             rm /tmp/frontend-build.tar.gz
             
-            echo "✅ Files uploaded and extracted"
+            echo "Files uploaded and extracted successfully"
           ENDSSH
           
           rm build.tar.gz
       
-      - name: 🔍 Verify Deployment Files
+      - name: Verify Deployment Files
         id: verify
         run: |
           FILE_CHECK=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
@@ -200,9 +196,9 @@ jobs:
               TOTAL_SIZE=$(du -sh "$DEPLOY_DIR" | cut -f1)
               echo "files=$FILE_COUNT"
               echo "size=$TOTAL_SIZE"
-              echo "✅ Verification passed: $FILE_COUNT files ($TOTAL_SIZE)"
+              echo "Verification passed: $FILE_COUNT files ($TOTAL_SIZE)"
             else
-              echo "❌ index.html not found in $DEPLOY_DIR"
+              echo "ERROR: index.html not found in $DEPLOY_DIR"
               exit 1
             fi
           ENDSSH
@@ -216,7 +212,7 @@ jobs:
           echo "deployed_size=$DEPLOYED_SIZE" >> $GITHUB_OUTPUT
       
       # ==================== TRAFFIC SWITCH ====================
-      - name: 🔀 Switch Traffic
+      - name: Switch Traffic
         id: switch
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
@@ -226,69 +222,61 @@ jobs:
             DEPLOY_DIR="${{ env.NGINX_ROOT }}/${{ steps.detect_version.outputs.deploy_version }}"
             CURRENT_LINK="${{ env.NGINX_ROOT }}/current"
             
-            # Backup current symlink
             if [ -L "$CURRENT_LINK" ]; then
               BACKUP_LINK="${CURRENT_LINK}.backup"
               sudo cp -P "$CURRENT_LINK" "$BACKUP_LINK"
-              echo "✅ Created backup symlink"
+              echo "Created backup symlink"
             fi
             
-            # Switch symlink
             sudo ln -sfn "$DEPLOY_DIR" "$CURRENT_LINK"
             
-            # Verify symlink
             NEW_TARGET=$(readlink "$CURRENT_LINK")
             if [ "$NEW_TARGET" = "$DEPLOY_DIR" ]; then
-              echo "✅ Symlink switched: $CURRENT_LINK -> $NEW_TARGET"
+              echo "Symlink switched: $CURRENT_LINK -> $NEW_TARGET"
             else
-              echo "❌ Symlink verification failed"
+              echo "ERROR: Symlink verification failed"
               exit 1
             fi
             
-            # Reload nginx to clear cache
             sudo nginx -s reload
-            echo "✅ Nginx reloaded"
+            echo "Nginx reloaded successfully"
           ENDSSH
       
-      - name: 🧪 Verify Website Accessibility
+      - name: Verify Website Accessibility
         run: |
-          sleep 2
+          sleep 3
           
-          echo "🧪 Testing website accessibility..."
+          echo "Testing website accessibility..."
           
-          # Test main page
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://cipher.thepaytrix.com/ || echo "000")
           
           if [ "$RESPONSE" = "200" ]; then
-            echo "✅ Website accessible (HTTP $RESPONSE)"
+            echo "Website accessible (HTTP $RESPONSE)"
             
-            # Verify it's actually serving the new version
             CONTENT=$(curl -s https://cipher.thepaytrix.com/ | head -n 20)
             if [[ "$CONTENT" == *"CipherBank"* ]]; then
-              echo "✅ Content verification passed"
+              echo "Content verification passed"
             else
-              echo "⚠️ Warning: Expected content not found"
+              echo "WARNING: Expected content not found"
             fi
           else
-            echo "❌ Website accessibility test failed (HTTP $RESPONSE)"
+            echo "ERROR: Website accessibility test failed (HTTP $RESPONSE)"
             exit 1
           fi
       
       # ==================== CLEANUP ====================
-      - name: 🧹 Cleanup Old Version
+      - name: Cleanup Old Version
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'ENDSSH'
             if [ "${{ steps.detect_version.outputs.active_version }}" != "none" ]; then
               OLD_DIR="${{ env.NGINX_ROOT }}/${{ steps.detect_version.outputs.active_version }}"
-              
-              # Keep the directory but mark as old (we'll clean it on next deployment)
-              echo "📌 Keeping $OLD_DIR for potential rollback"
+              echo "Keeping $OLD_DIR for potential rollback"
             fi
           ENDSSH
       
       # ==================== SUCCESS NOTIFICATION ====================
-      - name: 📢 Notify Deployment Success
+      - name: Notify Deployment Success
         if: success()
         run: |
           DEPLOY_TIME=$(date +'%Y-%m-%d %H:%M:%S UTC')
@@ -296,73 +284,108 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
-            -d text="✅ <b>CipherBank Frontend Deployment Successful</b>
-          
-          🎯 <b>Deployment Details</b>
-          • Version: ${{ steps.detect_version.outputs.active_version }} → <b>${{ steps.detect_version.outputs.deploy_version }}</b>
-          • Build: ${{ steps.build.outputs.file_count }} files (${{ steps.build.outputs.build_size }})
-          • Deployed: ${{ steps.verify.outputs.deployed_files }} files (${{ steps.verify.outputs.deployed_size }})
-          
-          📊 <b>Build Info</b>
-          • Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
-          • Author: ${{ steps.vars.outputs.AUTHOR }}
-          • Version: ${{ steps.vars.outputs.VERSION }}
-          • Built: ${{ steps.vars.outputs.BUILD_TIME }}
-          • Deployed: $DEPLOY_TIME
-          
-          🌐 <b>Website</b>
-          • URL: https://cipher.thepaytrix.com
-          • Status: ✅ Online
-          
-          💬 <i>${{ steps.vars.outputs.COMMIT_MSG }}</i>"
+            -d text="<b>✅ CipherBank Frontend - Deployment Successful</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>DEPLOYMENT STATUS</b>
+
+<b>Active Version:</b> ${{ steps.detect_version.outputs.active_version }} → <b>${{ steps.detect_version.outputs.deploy_version }}</b>
+<b>Current Serving:</b> <code>${{ steps.detect_version.outputs.deploy_version }}</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>BUILD METRICS</b>
+
+Build Size: ${{ steps.build.outputs.build_size }}
+Build Files: ${{ steps.build.outputs.file_count }}
+Deployed Size: ${{ steps.verify.outputs.deployed_size }}
+Deployed Files: ${{ steps.verify.outputs.deployed_files }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>BUILD DETAILS</b>
+
+Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
+Author: ${{ steps.vars.outputs.AUTHOR }}
+Version: <code>${{ steps.vars.outputs.VERSION }}</code>
+Built: ${{ steps.vars.outputs.BUILD_TIME }}
+Deployed: $DEPLOY_TIME
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>COMMIT MESSAGE</b>
+${{ steps.vars.outputs.COMMIT_MSG }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>WEBSITE STATUS</b>
+
+URL: https://cipher.thepaytrix.com
+Health: <b>✅ Online</b>
+Response: HTTP 200"
       
       # ==================== FAILURE HANDLING ====================
-      - name: 🚨 Rollback on Failure
+      - name: Rollback on Failure
         if: failure() && steps.switch.outcome == 'failure'
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'ENDSSH'
-            echo "🚨 Deployment failed, initiating rollback..."
+            echo "Deployment failed, initiating rollback..."
             
             CURRENT_LINK="${{ env.NGINX_ROOT }}/current"
             BACKUP_LINK="${CURRENT_LINK}.backup"
             
-            # Restore symlink from backup if it exists
             if [ -L "$BACKUP_LINK" ]; then
               sudo cp -P "$BACKUP_LINK" "$CURRENT_LINK"
               sudo nginx -s reload
-              echo "✅ Symlink restored from backup"
+              echo "Symlink restored from backup"
             fi
             
-            # Clean failed deployment
             DEPLOY_DIR="${{ env.NGINX_ROOT }}/${{ steps.detect_version.outputs.deploy_version }}"
             if [ -d "$DEPLOY_DIR" ]; then
               sudo find "$DEPLOY_DIR" -mindepth 1 -delete
-              echo "✅ Failed deployment cleaned"
+              echo "Failed deployment cleaned"
             fi
             
-            echo "✅ Rollback complete, serving ${{ steps.detect_version.outputs.active_version }}"
+            echo "Rollback complete, serving ${{ steps.detect_version.outputs.active_version }}"
           ENDSSH
       
-      - name: 📢 Notify Deployment Failure
+      - name: Notify Deployment Failure
         if: failure()
         run: |
+          FAILED_STEP="Unknown"
+          if [ "${{ steps.detect_version.outcome }}" = "failure" ]; then
+            FAILED_STEP="Version Detection"
+          elif [ "${{ steps.build.outcome }}" = "failure" ]; then
+            FAILED_STEP="React Build"
+          elif [ "${{ steps.verify.outcome }}" = "failure" ]; then
+            FAILED_STEP="File Verification"
+          elif [ "${{ steps.switch.outcome }}" = "failure" ]; then
+            FAILED_STEP="Traffic Switch"
+          fi
+          
           curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
-            -d text="❌ <b>CipherBank Frontend Deployment Failed</b>
-          
-          🚨 <b>Failure Details</b>
-          • Failed Step: ${{ steps.detect_version.outcome == 'failure' && 'Version Detection' || steps.build.outcome == 'failure' && 'React Build' || steps.verify.outcome == 'failure' && 'File Verification' || steps.switch.outcome == 'failure' && 'Traffic Switch' || 'Unknown' }}
-          • Target: ${{ steps.detect_version.outputs.deploy_version }}
-          
-          📊 <b>Build Info</b>
-          • Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
-          • Author: ${{ steps.vars.outputs.AUTHOR }}
-          • Version: ${{ steps.vars.outputs.VERSION }}
-          
-          🔄 <b>Status</b>
-          • Rollback: Initiated
-          • Active: ${{ steps.detect_version.outputs.active_version }} (unchanged)
-          
-          🔗 <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View Full Logs</a>"
+            -d text="<b>❌ CipherBank Frontend - Deployment Failed</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>FAILURE DETAILS</b>
+
+<b>Failed Step:</b> $FAILED_STEP
+<b>Target Version:</b> ${{ steps.detect_version.outputs.deploy_version }}
+<b>Active Version:</b> <code>${{ steps.detect_version.outputs.active_version }}</code> (unchanged)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>BUILD DETAILS</b>
+
+Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
+Author: ${{ steps.vars.outputs.AUTHOR }}
+Version: <code>${{ steps.vars.outputs.VERSION }}</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>ROLLBACK STATUS</b>
+
+Status: Initiated
+Current Serving: <code>${{ steps.detect_version.outputs.active_version }}</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>ACTION REQUIRED</b>
+
+<a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View Full Deployment Logs</a>"
