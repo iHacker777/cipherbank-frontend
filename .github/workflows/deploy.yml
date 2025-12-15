@@ -56,21 +56,23 @@ jobs:
       
       - name: Notify Deployment Start
         run: |
+          MESSAGE="<b>CipherBank Frontend - Deployment Started</b>
+
+          <b>Build Information</b>
+          Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
+          Author: ${{ steps.vars.outputs.AUTHOR }}
+          Version: ${{ steps.vars.outputs.VERSION }}
+          Time: ${{ steps.vars.outputs.BUILD_TIME }}
+
+          <b>Commit Message</b>
+          ${{ steps.vars.outputs.COMMIT_MSG }}
+
+          <b>Status:</b> Installing dependencies..."
+
           curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
-            -d text="<b>CipherBank Frontend - Deployment Started</b>
-
-<b>Build Information</b>
-Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
-Author: ${{ steps.vars.outputs.AUTHOR }}
-Version: ${{ steps.vars.outputs.VERSION }}
-Time: ${{ steps.vars.outputs.BUILD_TIME }}
-
-<b>Commit Message</b>
-${{ steps.vars.outputs.COMMIT_MSG }}
-
-<b>Status:</b> Installing dependencies..."
+            -d text="$MESSAGE"
       
       # ==================== BUILD ====================
       - name: Install Dependencies
@@ -102,14 +104,16 @@ ${{ steps.vars.outputs.COMMIT_MSG }}
       - name: Notify Build Complete
         if: success()
         run: |
+          MESSAGE="<b>Build Completed</b>
+          Size: ${{ steps.build.outputs.build_size }}
+          Files: ${{ steps.build.outputs.file_count }}
+
+          <b>Status:</b> Uploading to server..."
+
           curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
-            -d text="<b>Build Completed</b>
-Size: ${{ steps.build.outputs.build_size }}
-Files: ${{ steps.build.outputs.file_count }}
-
-<b>Status:</b> Uploading to server..."
+            -d text="$MESSAGE"
       
       # ==================== DETECT ACTIVE VERSION ====================
       - name: Detect Active Version
@@ -281,44 +285,46 @@ Files: ${{ steps.build.outputs.file_count }}
         run: |
           DEPLOY_TIME=$(date +'%Y-%m-%d %H:%M:%S UTC')
           
+          MESSAGE="<b>✅ CipherBank Frontend - Deployment Successful</b>
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>DEPLOYMENT STATUS</b>
+
+          <b>Active Version:</b> ${{ steps.detect_version.outputs.active_version }} → <b>${{ steps.detect_version.outputs.deploy_version }}</b>
+          <b>Current Serving:</b> <code>${{ steps.detect_version.outputs.deploy_version }}</code>
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>BUILD METRICS</b>
+
+          Build Size: ${{ steps.build.outputs.build_size }}
+          Build Files: ${{ steps.build.outputs.file_count }}
+          Deployed Size: ${{ steps.verify.outputs.deployed_size }}
+          Deployed Files: ${{ steps.verify.outputs.deployed_files }}
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>BUILD DETAILS</b>
+
+          Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
+          Author: ${{ steps.vars.outputs.AUTHOR }}
+          Version: <code>${{ steps.vars.outputs.VERSION }}</code>
+          Built: ${{ steps.vars.outputs.BUILD_TIME }}
+          Deployed: $DEPLOY_TIME
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>COMMIT MESSAGE</b>
+          ${{ steps.vars.outputs.COMMIT_MSG }}
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>WEBSITE STATUS</b>
+
+          URL: https://cipher.thepaytrix.com
+          Health: <b>✅ Online</b>
+          Response: HTTP 200"
+
           curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
-            -d text="<b>✅ CipherBank Frontend - Deployment Successful</b>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>DEPLOYMENT STATUS</b>
-
-<b>Active Version:</b> ${{ steps.detect_version.outputs.active_version }} → <b>${{ steps.detect_version.outputs.deploy_version }}</b>
-<b>Current Serving:</b> <code>${{ steps.detect_version.outputs.deploy_version }}</code>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>BUILD METRICS</b>
-
-Build Size: ${{ steps.build.outputs.build_size }}
-Build Files: ${{ steps.build.outputs.file_count }}
-Deployed Size: ${{ steps.verify.outputs.deployed_size }}
-Deployed Files: ${{ steps.verify.outputs.deployed_files }}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>BUILD DETAILS</b>
-
-Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
-Author: ${{ steps.vars.outputs.AUTHOR }}
-Version: <code>${{ steps.vars.outputs.VERSION }}</code>
-Built: ${{ steps.vars.outputs.BUILD_TIME }}
-Deployed: $DEPLOY_TIME
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>COMMIT MESSAGE</b>
-${{ steps.vars.outputs.COMMIT_MSG }}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>WEBSITE STATUS</b>
-
-URL: https://cipher.thepaytrix.com
-Health: <b>✅ Online</b>
-Response: HTTP 200"
+            -d text="$MESSAGE"
       
       # ==================== FAILURE HANDLING ====================
       - name: Rollback on Failure
@@ -360,32 +366,34 @@ Response: HTTP 200"
             FAILED_STEP="Traffic Switch"
           fi
           
+          MESSAGE="<b>❌ CipherBank Frontend - Deployment Failed</b>
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>FAILURE DETAILS</b>
+
+          <b>Failed Step:</b> $FAILED_STEP
+          <b>Target Version:</b> ${{ steps.detect_version.outputs.deploy_version }}
+          <b>Active Version:</b> <code>${{ steps.detect_version.outputs.active_version }}</code> (unchanged)
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>BUILD DETAILS</b>
+
+          Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
+          Author: ${{ steps.vars.outputs.AUTHOR }}
+          Version: <code>${{ steps.vars.outputs.VERSION }}</code>
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>ROLLBACK STATUS</b>
+
+          Status: Initiated
+          Current Serving: <code>${{ steps.detect_version.outputs.active_version }}</code>
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>ACTION REQUIRED</b>
+
+          <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View Full Deployment Logs</a>"
+
           curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
-            -d text="<b>❌ CipherBank Frontend - Deployment Failed</b>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>FAILURE DETAILS</b>
-
-<b>Failed Step:</b> $FAILED_STEP
-<b>Target Version:</b> ${{ steps.detect_version.outputs.deploy_version }}
-<b>Active Version:</b> <code>${{ steps.detect_version.outputs.active_version }}</code> (unchanged)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>BUILD DETAILS</b>
-
-Commit: <code>${{ steps.vars.outputs.COMMIT_SHA }}</code>
-Author: ${{ steps.vars.outputs.AUTHOR }}
-Version: <code>${{ steps.vars.outputs.VERSION }}</code>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>ROLLBACK STATUS</b>
-
-Status: Initiated
-Current Serving: <code>${{ steps.detect_version.outputs.active_version }}</code>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>ACTION REQUIRED</b>
-
-<a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View Full Deployment Logs</a>"
+            -d text="$MESSAGE"
