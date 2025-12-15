@@ -727,7 +727,7 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
   const [isDragging, setIsDragging] = useState(false);
   const [uploadData, setUploadData] = useState({
       parserKey: 'iob',
-      username: user?.username || 'admin',  // Use logged-in user's username
+      username: user?.username || 'admin',  // Use logged-in l user's username
       accountNo: '',
       file: null
   });
