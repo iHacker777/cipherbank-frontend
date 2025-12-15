@@ -225,11 +225,11 @@ jobs:
             # Create SPA rewrite rule if it doesn't exist
             if ! grep -q "try_files" "$REWRITE_FILE" 2>/dev/null; then
               echo "Adding SPA routing configuration..."
-              cat > "$REWRITE_FILE" << 'EOF'
+              sudo tee "$REWRITE_FILE" > /dev/null << 'EOFNGINX'
 location / {
     try_files $uri $uri/ /index.html;
 }
-EOF
+EOFNGINX
               sudo nginx -t && sudo nginx -s reload
               echo "SPA routing configured successfully"
             else
