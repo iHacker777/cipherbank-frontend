@@ -449,7 +449,7 @@ jobs:
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           <b>ROLLBACK STATUS</b>
 
-          Status: Initiated
+          Status:  Initiated
           Current Serving: <code>${{ steps.detect_version.outputs.active_version }}</code>
 
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
