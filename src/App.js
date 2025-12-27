@@ -327,8 +327,10 @@ const validateForm = () => {
             errorMessage = data.message || 'Invalid request. Please check your input.';
             break;
           case 401:
-          case 403:
             errorMessage = 'Invalid username or password. Please try again.';
+            break;
+          case 403:
+            errorMessage = 'Forbidden! Ip not whitelisted';
             break;
           case 404:
             errorMessage = 'Service not found. Please contact support.';
