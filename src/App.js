@@ -262,8 +262,8 @@ const validateForm = () => {
     return false;
   }
 
-  if (!formData.password || formData.password.length < 6) {
-    showNotification('Password must be at least 6 characters long', 'error');
+  if (!formData.password || formData.password.length < 4) {
+    showNotification('Password must be at least 4 characters long', 'error');
     return false;
   }
 
