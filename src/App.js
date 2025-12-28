@@ -82,7 +82,7 @@ const CipherBankUI = () => {
 
 //   Periodic token validation - check every 30 seconds
   useEffect(() => {
-     Don't run validation if:
+//     Don't run validation if:
      1. No token exists
      2. On login page
      3. Currently loading (during login)
