@@ -281,7 +281,7 @@ const validateForm = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_AUTH_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1210,7 +1210,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
     setCreating(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await fetch(`${API_AUTH_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1609,7 +1609,7 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
     setChanging(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      const response = await fetch(`${API_AUTH_URL}/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
