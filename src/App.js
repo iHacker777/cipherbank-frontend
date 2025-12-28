@@ -83,11 +83,11 @@ const CipherBankUI = () => {
 //   Periodic token validation - check every 30 seconds
   useEffect(() => {
 //     Don't run validation if:
-     1. No token exists
-     2. On login page
-     3. Currently loading (during login)
+//     1. No token exists
+//     2. On login page
+//     3. Currently loading (during login)
     if (!token || currentView === 'login') return;
-//
+
     const intervalId = setInterval(() => {
       if (!isTokenValid(token)) {
         console.log('Token expired during session');
