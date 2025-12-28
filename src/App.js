@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key } from 'lucide-react';
-// API Base URL - update this to your backend URL
+// API Base URL
 const API_BASE_URL = 'https://cipher.thepaytrix.com/api';
+const API_AUTH_URL = 'https://testing.thepaytrix.com/api';
 // JWT Token Validation Helper - Simplified for JWE tokens
 const isTokenValid = (token) => {
   // For encrypted tokens (JWE), we can't decode them client-side
@@ -79,23 +80,23 @@ const CipherBankUI = () => {
     }
   }, []);
 
-  // Periodic token validation - check every 30 seconds
-  //useEffect(() => {
-    // Don't run validation if:
-    // 1. No token exists
-    // 2. On login page
-    // 3. Currently loading (during login)
-    //if (!token || currentView === 'login') return;
-
-    //const intervalId = setInterval(() => {
-      //if (!isTokenValid(token)) {
-        //console.log('Token expired during session');
-        //clearSessionAndRedirect(setCurrentView, setUser, setToken, showNotification, currentView);
-      //}
-    //}, 30000);
-
-    //return () => clearInterval(intervalId);
-  //}, [token, currentView]);
+   Periodic token validation - check every 30 seconds
+  useEffect(() => {
+     Don't run validation if:
+     1. No token exists
+     2. On login page
+     3. Currently loading (during login)
+    if (!token || currentView === 'login') return;
+//
+    const intervalId = setInterval(() => {
+      if (!isTokenValid(token)) {
+        console.log('Token expired during session');
+        clearSessionAndRedirect(setCurrentView, setUser, setToken, showNotification, currentView);
+      }
+    }, 30000);
+//
+    return () => clearInterval(intervalId);
+  }, [token, currentView]);
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
