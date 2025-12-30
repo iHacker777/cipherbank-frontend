@@ -711,11 +711,8 @@ const LoginView = ({ setCurrentView, setUser, setToken, setTokenExpiry, showNoti
                 <div className="flex-1">
                   <label htmlFor="autoRefresh" className="text-sm font-semibold text-gray-900 cursor-pointer flex items-center gap-2">
                     <RefreshCw className="w-4 h-4" />
-                    Enable Auto Token Refresh
+                    Remember this session!
                   </label>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Remember this session
-                  </p>
                   <p className="text-xs text-yellow-700 mt-2 flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" />
                     Use only on trusted devices!
