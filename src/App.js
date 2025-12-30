@@ -714,11 +714,11 @@ const LoginView = ({ setCurrentView, setUser, setToken, setTokenExpiry, showNoti
                     Enable Auto Token Refresh
                   </label>
                   <p className="text-xs text-gray-600 mt-1">
-                    Automatically refresh your session when it's about to expire (within last 2 minutes).
+                    Remember this session
                   </p>
                   <p className="text-xs text-yellow-700 mt-2 flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" />
-                    Credentials stored locally (use only on trusted devices)
+                    Use only on trusted devices!
                   </p>
                 </div>
               </div>
