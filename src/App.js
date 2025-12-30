@@ -535,7 +535,7 @@ const LoginView = ({ setCurrentView, setUser, setToken, setTokenExpiry, showNoti
     }
 
     if (!formData.password || formData.password.length < CONFIG.PASSWORD_MIN_LENGTH) {
-      showNotification(`Password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters long', 'error');
+      showNotification(`Password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters long`, 'error');
       return false;
     }
 
