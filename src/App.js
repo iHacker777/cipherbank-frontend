@@ -1,41 +1,179 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key } from 'lucide-react';
-// API Base URL
-const API_BASE_URL = 'https://cipher.thepaytrix.com/api';
-const API_AUTH_URL = 'https://testing.thepaytrix.com/api';
-// JWT Token Validation Helper - Simplified for JWE tokens
+import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key, AlertTriangle } from 'lucide-react';
+
+// ==================== CONFIGURATION ====================
+// API Configuration - Use environment variables in production
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://cipher.thepaytrix.com/api';
+const API_AUTH_URL = process.env.REACT_APP_API_AUTH_URL || 'https://testing.thepaytrix.com/api';
+
+// Configuration constants
+const CONFIG = {
+  TOKEN_VALIDATION_INTERVAL: 300000, // 5 minutes (reduced from 30 seconds)
+  NOTIFICATION_DURATION: 5000,
+  PASSWORD_MIN_LENGTH: 6, // Aligned with backend requirement
+  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+  ALLOWED_FILE_EXTENSIONS: ['.csv', '.xls', '.xlsx', '.pdf'],
+  SESSION_TIMEOUT_WARNING: 120000, // 2 minutes before expiry
+  TOKEN_EXPIRY_TIME: 900000, // 15 minutes (from backend)
+};
+
+// ==================== UTILITY FUNCTIONS ====================
+
+/**
+ * Validate JWT token format (for JWE tokens)
+ * Note: We can't decode JWE tokens client-side, only validate format
+ */
 const isTokenValid = (token) => {
-  // For encrypted tokens (JWE), we can't decode them client-side
-  // Just check if token exists and has reasonable format
   if (!token || typeof token !== 'string' || token.trim().length === 0) {
     return false;
   }
 
-  // Check if it looks like a token (has dots)
+  // Check if it looks like a token (has at least 2 dots for JWE)
   const parts = token.split('.');
   if (parts.length < 3) {
-    console.warn('Invalid token format');
     return false;
   }
 
-  // Token appears valid - let backend validate it
   return true;
 };
 
-// Function to clear session and redirect to login
+/**
+ * Clear session data and redirect to login
+ */
 const clearSessionAndRedirect = (setCurrentView, setUser, setToken, showNotification, currentView) => {
   localStorage.removeItem('cipherbank_token');
   localStorage.removeItem('cipherbank_user');
   setToken(null);
   setUser(null);
   setCurrentView('login');
+
   // Only show notification if we're not already on login page
   if (showNotification && currentView !== 'login') {
     showNotification('Session expired. Please login again.', 'error');
   }
 };
-// ========== END OF HELPER FUNCTIONS ==========
 
+/**
+ * Validate file before upload
+ */
+const validateFile = (file) => {
+  const errors = [];
+
+  if (!file) {
+    errors.push('No file selected');
+    return { valid: false, errors };
+  }
+
+  // Check file size
+  if (file.size > CONFIG.MAX_FILE_SIZE) {
+    errors.push(`File size must be less than ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB`);
+  }
+
+  // Check file extension (case-insensitive)
+  const fileName = file.name.toLowerCase();
+  const hasValidExtension = CONFIG.ALLOWED_FILE_EXTENSIONS.some(ext => fileName.endsWith(ext));
+
+  if (!hasValidExtension) {
+    errors.push(`File type not supported. Allowed: ${CONFIG.ALLOWED_FILE_EXTENSIONS.join(', ')}`);
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Secure password generator using crypto API
+ */
+const generateSecurePassword = (length = 16) => {
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const numbers = '0123456789';
+  const special = '!@#$%^&*';
+  const allChars = lowercase + uppercase + numbers + special;
+
+  // Use crypto API for secure random numbers
+  const array = new Uint32Array(length);
+  window.crypto.getRandomValues(array);
+
+  let password = '';
+  // Ensure at least one of each type
+  password += lowercase[array[0] % lowercase.length];
+  password += uppercase[array[1] % uppercase.length];
+  password += numbers[array[2] % numbers.length];
+  password += special[array[3] % special.length];
+
+  // Fill the rest
+  for (let i = 4; i < length; i++) {
+    password += allChars[array[i] % allChars.length];
+  }
+
+  // Shuffle using Fisher-Yates algorithm
+  const passwordArray = password.split('');
+  for (let i = passwordArray.length - 1; i > 0; i--) {
+    const j = array[i] % (i + 1);
+    [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+  }
+
+  return passwordArray.join('');
+};
+
+/**
+ * Sanitize user input to prevent XSS
+ */
+const sanitizeInput = (input) => {
+  if (typeof input !== 'string') return input;
+
+  return input
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+};
+
+// ==================== ERROR BOUNDARY ====================
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+            <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+            <p className="text-gray-600 mb-6">
+              An unexpected error occurred. Please refresh the page and try again.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// ==================== MAIN APP COMPONENT ====================
 const CipherBankUI = () => {
   const [currentView, setCurrentView] = useState('login');
   const [user, setUser] = useState(null);
@@ -43,69 +181,69 @@ const CipherBankUI = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [notification, setNotification] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionWarningShown, setSessionWarningShown] = useState(false);
 
-  // Animation state
-  const [mounted, setMounted] = useState(false);
-
+  // Check for existing session on mount
   useEffect(() => {
-    setMounted(true);
-
-    // Check for existing session
     const savedToken = localStorage.getItem('cipherbank_token');
     const savedUser = localStorage.getItem('cipherbank_user');
 
     if (savedToken && savedUser) {
-      // Validate token before restoring session
       if (isTokenValid(savedToken)) {
         try {
           const userData = JSON.parse(savedUser);
           setToken(savedToken);
           setUser(userData);
           setCurrentView('dashboard');
-          console.log('Session restored successfully');
         } catch (error) {
-          console.error('Failed to parse user data:', error);
           // Clear corrupted data
           localStorage.removeItem('cipherbank_token');
           localStorage.removeItem('cipherbank_user');
         }
       } else {
-        // Token invalid/expired - clear everything silently
-        console.log('Invalid or expired token found, clearing session');
+        // Clear invalid token
         localStorage.removeItem('cipherbank_token');
         localStorage.removeItem('cipherbank_user');
       }
-    } else {
-      console.log('No saved session found');
     }
   }, []);
 
-//   Periodic token validation - check every 30 seconds
+  // Periodic token validation (every 5 minutes instead of 30 seconds)
   useEffect(() => {
-//     Don't run validation if:
-//     1. No token exists
-//     2. On login page
-//     3. Currently loading (during login)
     if (!token || currentView === 'login') return;
 
     const intervalId = setInterval(() => {
       if (!isTokenValid(token)) {
-        console.log('Token expired during session');
         clearSessionAndRedirect(setCurrentView, setUser, setToken, showNotification, currentView);
       }
-    }, 30000);
-//
+    }, CONFIG.TOKEN_VALIDATION_INTERVAL);
+
     return () => clearInterval(intervalId);
   }, [token, currentView]);
 
+  // Session timeout warning (show 2 minutes before expiry)
+  useEffect(() => {
+    if (!token || currentView === 'login') return;
+
+    const warningTimeout = setTimeout(() => {
+      if (!sessionWarningShown) {
+        showNotification('Your session will expire in 2 minutes. Please save your work.', 'warning');
+        setSessionWarningShown(true);
+      }
+    }, CONFIG.TOKEN_EXPIRY_TIME - CONFIG.SESSION_TIMEOUT_WARNING);
+
+    return () => clearTimeout(warningTimeout);
+  }, [token, currentView, sessionWarningShown]);
+
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
+    setTimeout(() => setNotification(null), CONFIG.NOTIFICATION_DURATION);
   };
 
   const handleLogout = () => {
     setUser(null);
     setToken(null);
+    setSessionWarningShown(false);
     localStorage.removeItem('cipherbank_token');
     localStorage.removeItem('cipherbank_user');
     setCurrentView('login');
@@ -113,167 +251,144 @@ const CipherBankUI = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Notification Toast */}
-      {notification && (
-        <div className={`fixed top-4 right-4 z-50 animate-slideInRight`}>
-          <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl backdrop-blur-md ${
-            notification.type === 'success' ? 'bg-emerald-500' : 
-            notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-          } text-white`}>
-            {notification.type === 'success' && <CheckCircle className="w-5 h-5" />}
-            {notification.type === 'error' && <XCircle className="w-5 h-5" />}
-            <span className="font-medium">{notification.message}</span>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        {/* Notification Toast */}
+        {notification && (
+          <div className="fixed top-4 right-4 z-50 animate-slideInRight">
+            <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl backdrop-blur-md ${
+              notification.type === 'success' ? 'bg-emerald-500' :
+              notification.type === 'error' ? 'bg-red-500' :
+              notification.type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+            } text-white max-w-md`}>
+              {notification.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" />}
+              {notification.type === 'error' && <XCircle className="w-5 h-5 flex-shrink-0" />}
+              {notification.type === 'warning' && <AlertTriangle className="w-5 h-5 flex-shrink-0" />}
+              <span className="font-medium">{notification.message}</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Content */}
-      {currentView === 'login' && (
-        <LoginView 
-          setCurrentView={setCurrentView} 
-          setUser={setUser} 
-          setToken={setToken}
-          showNotification={showNotification}
-          setIsLoading={setIsLoading}
-        />
-      )}
-      {(currentView === 'dashboard' || currentView === 'upload' || currentView === 'statements' || currentView === 'users' || currentView === 'changepassword') && (
-        <DashboardLayout
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          user={user}
-          token={token}
-          setUser={setUser}
-          setToken={setToken}
-          handleLogout={handleLogout}
-          showNotification={showNotification}
-          isMenuOpen={isMenuOpen}
-          setIsMenuOpen={setIsMenuOpen}
-        />
-      )}
+        {/* Main Content */}
+        {currentView === 'login' && (
+          <LoginView
+            setCurrentView={setCurrentView}
+            setUser={setUser}
+            setToken={setToken}
+            showNotification={showNotification}
+            setIsLoading={setIsLoading}
+            setSessionWarningShown={setSessionWarningShown}
+          />
+        )}
 
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-8 shadow-2xl">
-            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-            <p className="mt-4 text-gray-600 font-medium">Processing...</p>
+        {(currentView === 'dashboard' || currentView === 'upload' || currentView === 'statements' || currentView === 'users' || currentView === 'changepassword') && (
+          <DashboardLayout
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+            user={user}
+            token={token}
+            setUser={setUser}
+            setToken={setToken}
+            handleLogout={handleLogout}
+            showNotification={showNotification}
+            isMenuOpen={isMenuOpen}
+            setIsMenuOpen={setIsMenuOpen}
+          />
+        )}
+
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white rounded-2xl p-8 shadow-2xl">
+              <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+              <p className="mt-4 text-gray-600 font-medium">Processing...</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <style>{`
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
+        {/* Styles */}
+        <style>{`
+          @keyframes slideInRight {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
           }
-          to {
-            transform: translateX(0);
-            opacity: 1;
+
+          @keyframes fadeInUp {
+            from {
+              transform: translateY(20px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
           }
-        }
 
-        @keyframes fadeInUp {
-          from {
-            transform: translateY(20px);
-            opacity: 0;
+          .animate-slideInRight {
+            animation: slideInRight 0.4s ease-out;
           }
-          to {
-            transform: translateY(0);
-            opacity: 1;
+
+          .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease-out;
           }
-        }
 
-        @keyframes scaleIn {
-          from {
-            transform: scale(0.95);
-            opacity: 0;
+          .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           }
-          to {
-            transform: scale(1);
-            opacity: 1;
+
+          .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
           }
-        }
 
-        @keyframes shimmer {
-          0% {
-            background-position: -1000px 0;
+          .glass-effect {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
           }
-          100% {
-            background-position: 1000px 0;
+
+          .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
           }
-        }
-
-        .animate-slideInRight {
-          animation: slideInRight 0.4s ease-out;
-        }
-
-        .animate-fadeInUp {
-          animation: fadeInUp 0.6s ease-out;
-        }
-
-        .animate-scaleIn {
-          animation: scaleIn 0.4s ease-out;
-        }
-
-        .animate-shimmer {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-          background-size: 1000px 100%;
-          animation: shimmer 2s infinite;
-        }
-
-        .hover-lift {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .hover-lift:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-
-        .glass-effect {
-          background: rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        .gradient-text {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-      `}</style>
-    </div>
+        `}</style>
+      </div>
+    </ErrorBoundary>
   );
 };
 
-// Login/Register View
-const LoginView = ({ setCurrentView, setUser, setToken, showNotification, setIsLoading }) => {
+// ==================== LOGIN VIEW ====================
+const LoginView = ({ setCurrentView, setUser, setToken, showNotification, setIsLoading, setSessionWarningShown }) => {
   const [formData, setFormData] = useState({
     username: '',
-    password: '',
-    roleIds: []
+    password: ''
   });
-const validateForm = () => {
-  if (!formData.username || formData.username.trim().length < 3) {
-    showNotification('Username must be at least 3 characters long', 'error');
-    return false;
-  }
 
-  if (!formData.password || formData.password.length < 4) {
-    showNotification('Password must be at least 4 characters long', 'error');
-    return false;
-  }
+  const validateForm = () => {
+    if (!formData.username || formData.username.trim().length < 3) {
+      showNotification('Username must be at least 3 characters long', 'error');
+      return false;
+    }
 
-  return true;
-};
+    if (!formData.password || formData.password.length < CONFIG.PASSWORD_MIN_LENGTH) {
+      showNotification(`Password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters long`, 'error');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate form
     if (!validateForm()) {
       return;
     }
@@ -286,52 +401,56 @@ const validateForm = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          username: sanitizeInput(formData.username),
+          password: formData.password // Don't sanitize password
+        }),
       });
 
-      // Try to parse response as JSON
-      let data;
-      try {
-        data = await response.json();
-      } catch (jsonError) {
-        // If JSON parsing fails, create a default error object
-        data = { message: 'Invalid response from server' };
+      let data = null;
+
+      // Only parse JSON if response is OK or has content
+      if (response.ok || response.headers.get('content-type')?.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          data = { message: 'Invalid response from server' };
+        }
       }
 
-      if (response.ok) {
-        // SUCCESS PATH
+      if (response.ok && data) {
         if (!data.token) {
           showNotification('No token received from server', 'error');
           return;
         }
 
-        // Set token
+        // Set token and user
         setToken(data.token);
         localStorage.setItem('cipherbank_token', data.token);
 
-        // Use roles from backend response
         const userData = {
           username: data.username || formData.username,
           roles: data.roles || ['ROLE_USER']
         };
         setUser(userData);
         localStorage.setItem('cipherbank_user', JSON.stringify(userData));
+        setSessionWarningShown(false); // Reset session warning
 
         showNotification('Login successful!', 'success');
         setCurrentView('dashboard');
       } else {
-        // ERROR PATH - response not OK
+        // Handle errors
         let errorMessage;
 
         switch (response.status) {
           case 400:
-            errorMessage = data.message || 'Invalid request. Please check your input.';
+            errorMessage = data?.message || 'Invalid request. Please check your input.';
             break;
           case 401:
             errorMessage = 'Invalid username or password. Please try again.';
             break;
           case 403:
-            errorMessage = 'Forbidden! Ip not whitelisted';
+            errorMessage = 'Access forbidden. IP not whitelisted or account inactive.';
             break;
           case 404:
             errorMessage = 'Service not found. Please contact support.';
@@ -340,14 +459,12 @@ const validateForm = () => {
             errorMessage = 'Server error. Please try again later.';
             break;
           default:
-            errorMessage = data.message || `Authentication failed (Error ${response.status})`;
+            errorMessage = data?.message || `Authentication failed (Error ${response.status})`;
         }
 
         showNotification(errorMessage, 'error');
       }
     } catch (error) {
-      // Network errors or other exceptions
-      console.error('Login error:', error);
       showNotification('Connection error. Please check your internet connection and try again.', 'error');
     } finally {
       setIsLoading(false);
@@ -356,7 +473,7 @@ const validateForm = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      {/* Animated Background Circles */}
+      {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute w-96 h-96 bg-blue-200/30 rounded-full blur-3xl -top-48 -left-48 animate-pulse"></div>
         <div className="absolute w-96 h-96 bg-purple-200/30 rounded-full blur-3xl -bottom-48 -right-48 animate-pulse" style={{animationDelay: '1s'}}></div>
@@ -371,6 +488,7 @@ const validateForm = () => {
           <h1 className="text-4xl font-bold gradient-text mb-2">Cipher Bank</h1>
           <p className="text-gray-600">Secure & Automated Statement Parsing</p>
         </div>
+
         {/* Login Card */}
         <div className="glass-effect rounded-3xl shadow-2xl p-8 hover-lift">
           <div className="mb-8">
@@ -388,6 +506,8 @@ const validateForm = () => {
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
                 className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 bg-white/50"
                 required
+                minLength={3}
+                maxLength={50}
               />
             </div>
 
@@ -399,6 +519,7 @@ const validateForm = () => {
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300 bg-white/50"
                 required
+                minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
             </div>
 
@@ -418,21 +539,18 @@ const validateForm = () => {
     </div>
   );
 };
-// Dashboard Layout
-const DashboardLayout = ({ currentView, setCurrentView, user, token, setUser, setToken, handleLogout, showNotification, isMenuOpen, setIsMenuOpen }) => {
 
-  // Validate token on every render of protected pages
+// ==================== DASHBOARD LAYOUT ====================
+const DashboardLayout = ({ currentView, setCurrentView, user, token, setUser, setToken, handleLogout, showNotification, isMenuOpen, setIsMenuOpen }) => {
+  // Validate token on protected pages
   useEffect(() => {
-    // Only check if token exists, don't validate it
     if (!token) {
-      console.log('No token found, redirecting to login');
       setCurrentView('login');
     }
-  }, [currentView, token]);
+  }, [currentView, token, setCurrentView]);
 
   return (
     <div className="min-h-screen flex">
-      {/* Sidebar */}
       <Sidebar
         currentView={currentView}
         setCurrentView={setCurrentView}
@@ -442,7 +560,6 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, setUser, se
         setIsMenuOpen={setIsMenuOpen}
       />
 
-      {/* Main Content */}
       <div className="flex-1 lg:ml-72">
         <Header user={user} setIsMenuOpen={setIsMenuOpen} />
         <main className="p-6 lg:p-8">
@@ -457,25 +574,23 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, setUser, se
   );
 };
 
-// Sidebar Component
+// ==================== SIDEBAR COMPONENT ====================
 const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, setIsMenuOpen }) => {
-  // Check if user is admin
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') || false;
 
-  // Build menu items based on role
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Activity },
     { id: 'upload', label: 'Upload Statement', icon: Upload },
     { id: 'statements', label: 'Statements', icon: FileText },
-    // Only show User Management for admins
     ...(isAdmin ? [{ id: 'users', label: 'User Management', icon: Users }] : []),
     { id: 'changepassword', label: 'Change Password', icon: Key },
   ];
+
   return (
     <>
       {/* Mobile Overlay */}
       {isMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setIsMenuOpen(false)}
         ></div>
@@ -500,7 +615,7 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
           </div>
           <div>
             <h2 className="text-xl font-bold">CipherBank</h2>
-            <p className="text-xs text-gray-400">Automated Statement Parsing</p>
+            <p className="text-xs text-gray-400">Automated Parsing</p>
           </div>
         </div>
 
@@ -511,9 +626,9 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-semibold">{user?.username || 'User'}</p>
+              <p className="font-semibold truncate">{user?.username || 'User'}</p>
               <p className="text-xs text-gray-400">
-                {user?.roles?.includes('ROLE_ADMIN') ? 'Administrator' : 'User'}
+                {isAdmin ? 'Administrator' : 'User'}
               </p>
             </div>
           </div>
@@ -524,7 +639,7 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
-            
+
             return (
               <button
                 key={item.id}
@@ -533,8 +648,8 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
                   setIsMenuOpen(false);
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                  isActive 
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg' 
+                  isActive
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg'
                     : 'hover:bg-white/10'
                 }`}
               >
@@ -559,7 +674,7 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
   );
 };
 
-// Header Component
+// ==================== HEADER COMPONENT ====================
 const Header = ({ user, setIsMenuOpen }) => {
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 lg:px-8">
@@ -575,23 +690,12 @@ const Header = ({ user, setIsMenuOpen }) => {
           <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.username}!</h1>
           <p className="text-sm text-gray-600 mt-1">Manage your bank statements efficiently</p>
         </div>
-
-        <div className="hidden lg:flex items-center gap-4">
-          <div className="relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search statements..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-            />
-          </div>
-        </div>
       </div>
     </header>
   );
 };
 
-// Dashboard View
+// ==================== DASHBOARD VIEW ====================
 const Dashboard = ({ token, showNotification }) => {
   const [stats, setStats] = useState({
     totalUploads: 0,
@@ -601,7 +705,7 @@ const Dashboard = ({ token, showNotification }) => {
   });
 
   useEffect(() => {
-    // Mock data - replace with actual API calls
+    // TODO: Replace with actual API call
     setStats({
       totalUploads: 127,
       totalTransactions: 1543,
@@ -615,31 +719,31 @@ const Dashboard = ({ token, showNotification }) => {
   }, [token]);
 
   const statCards = [
-    { 
-      title: 'Total Uploads', 
-      value: stats.totalUploads, 
-      icon: Upload, 
+    {
+      title: 'Total Uploads',
+      value: stats.totalUploads,
+      icon: Upload,
       color: 'from-blue-500 to-blue-600',
       bgColor: 'bg-blue-50'
     },
-    { 
-      title: 'Transactions', 
-      value: stats.totalTransactions, 
-      icon: Activity, 
+    {
+      title: 'Transactions',
+      value: stats.totalTransactions,
+      icon: Activity,
       color: 'from-purple-500 to-purple-600',
       bgColor: 'bg-purple-50'
     },
-    { 
-      title: 'Total Amount', 
-      value: `₹${stats.totalAmount.toLocaleString('en-IN')}`, 
-      icon: DollarSign, 
+    {
+      title: 'Total Amount',
+      value: `₹${stats.totalAmount.toLocaleString('en-IN')}`,
+      icon: DollarSign,
       color: 'from-emerald-500 to-emerald-600',
       bgColor: 'bg-emerald-50'
     },
-    { 
-      title: 'Success Rate', 
-      value: '98.5%', 
-      icon: TrendingUp, 
+    {
+      title: 'Success Rate',
+      value: '98.5%',
+      icon: TrendingUp,
       color: 'from-orange-500 to-orange-600',
       bgColor: 'bg-orange-50'
     },
@@ -652,14 +756,14 @@ const Dashboard = ({ token, showNotification }) => {
         {statCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div 
-              key={stat.title} 
+            <div
+              key={stat.title}
               className="glass-effect rounded-2xl p-6 hover-lift"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center`}>
-                  <Icon className={`w-6 h-6 bg-gradient-to-r ${stat.color} text-transparent`} style={{WebkitBackgroundClip: 'text'}} />
+                  <Icon className="w-6 h-6 text-blue-600" />
                 </div>
                 <span className="text-xs font-semibold text-emerald-600">+12.5%</span>
               </div>
@@ -693,8 +797,8 @@ const Dashboard = ({ token, showNotification }) => {
             </thead>
             <tbody>
               {stats.recentUploads.map((upload, index) => (
-                <tr 
-                  key={upload.id} 
+                <tr
+                  key={upload.id}
                   className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
                   style={{ animation: `fadeInUp 0.4s ease-out ${index * 0.1}s backwards` }}
                 >
@@ -725,16 +829,15 @@ const Dashboard = ({ token, showNotification }) => {
   );
 };
 
-// Upload View
+// ==================== UPLOAD VIEW ====================
 const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken, user }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadData, setUploadData] = useState({
-      parserKey: 'iob',
-      username: user?.username || 'admin',  // Use logged-in l user's username
-      accountNo: '',
-      file: null
+    parserKey: 'iob',
+    username: user?.username || 'admin',
+    accountNo: '',
+    file: null
   });
-
   const [uploading, setUploading] = useState(false);
 
   const handleDragOver = (e) => {
@@ -751,21 +854,43 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      setUploadData({ ...uploadData, file });
+      const validation = validateFile(file);
+      if (validation.valid) {
+        setUploadData({ ...uploadData, file });
+      } else {
+        validation.errors.forEach(error => showNotification(error, 'error'));
+      }
     }
   };
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setUploadData({ ...uploadData, file });
+      const validation = validateFile(file);
+      if (validation.valid) {
+        setUploadData({ ...uploadData, file });
+      } else {
+        validation.errors.forEach(error => showNotification(error, 'error'));
+      }
     }
   };
 
   const handleUpload = async () => {
-
     if (!uploadData.file) {
       showNotification('Please select a file', 'error');
+      return;
+    }
+
+    // Validate file again before upload
+    const validation = validateFile(uploadData.file);
+    if (!validation.valid) {
+      validation.errors.forEach(error => showNotification(error, 'error'));
+      return;
+    }
+
+    // Validate account number for IOB
+    if (uploadData.parserKey === 'iob' && !uploadData.accountNo) {
+      showNotification('Account number is required for IOB statements', 'error');
       return;
     }
 
@@ -788,7 +913,7 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
         body: formData
       });
 
-      // Check for 401/403 - token expired
+      // Check for authentication errors
       if (response.status === 401 || response.status === 403) {
         showNotification('Session expired. Please login again.', 'error');
         setTimeout(() => {
@@ -800,12 +925,15 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
       const data = await response.json();
 
       if (response.ok) {
-        showNotification(`Upload successful! Processed ${data.rowsParsed} rows (${data.rowsInserted} new, ${data.rowsDeduped} duplicates)`, 'success');
+        showNotification(
+          `Upload successful! Processed ${data.rowsParsed} rows (${data.rowsInserted} new, ${data.rowsDeduped} duplicates)`,
+          'success'
+        );
+        // Reset form
         setUploadData({ ...uploadData, file: null, accountNo: '' });
       } else {
         showNotification(data.message || 'Upload failed', 'error');
       }
-
     } catch (error) {
       showNotification('Upload failed. Please try again.', 'error');
     } finally {
@@ -817,7 +945,9 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
     <div className="max-w-4xl mx-auto animate-fadeInUp">
       <div className="glass-effect rounded-2xl p-8 lg:p-10">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Bank Statement</h2>
-        <p className="text-gray-600 mb-8">Upload CSV, XLS, XLSX, or PDF bank statements for processing</p>
+        <p className="text-gray-600 mb-8">
+          Upload CSV, XLS, XLSX, or PDF bank statements for processing (Max {CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB)
+        </p>
 
         {/* Bank Selection */}
         <div className="mb-6">
@@ -848,7 +978,7 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
           </div>
         </div>
 
-        {/* Account Number (optional for IOB) */}
+        {/* Account Number (required for IOB) */}
         {uploadData.parserKey === 'iob' && (
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -914,12 +1044,12 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
                   <input
                     type="file"
                     onChange={handleFileSelect}
-                    accept=".csv,.xls,.xlsx,.pdf"
+                    accept={CONFIG.ALLOWED_FILE_EXTENSIONS.join(',')}
                     className="hidden"
                   />
                 </label>
                 <p className="text-xs text-gray-500 mt-4">
-                  Supported formats: CSV, XLS, XLSX, PDF (Max 10MB)
+                  Supported formats: CSV, XLS, XLSX, PDF (Max {CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB)
                 </p>
               </>
             )}
@@ -950,21 +1080,26 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
   );
 };
 
-// Statements View
+// ==================== STATEMENTS VIEW ====================
 const StatementsView = ({ token, showNotification }) => {
   const [statements, setStatements] = useState([]);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data - replace with actual API call
-    setStatements([
-      { id: 1, date: '2024-11-28', bank: 'IOB', filename: 'statement_nov.csv', transactions: 45, amount: 125000, status: 'processed' },
-      { id: 2, date: '2024-11-27', bank: 'KGB', filename: 'kerala_oct.xlsx', transactions: 89, amount: 287500, status: 'processed' },
-      { id: 3, date: '2024-11-26', bank: 'Indian Bank', filename: 'indianbank_sep.xlsx', transactions: 67, amount: 198750, status: 'processed' },
-      { id: 4, date: '2024-11-25', bank: 'IOB', filename: 'statement_aug.csv', transactions: 52, amount: 164320, status: 'pending' },
-      { id: 5, date: '2024-11-24', bank: 'KGB', filename: 'kerala_jul.xlsx', transactions: 78, amount: 234650, status: 'processed' },
-    ]);
+    // TODO: Replace with actual API call to fetch statements
+    // For now, using mock data
+    setTimeout(() => {
+      setStatements([
+        { id: 1, date: '2024-11-28', bank: 'IOB', filename: 'statement_nov.csv', transactions: 45, amount: 125000, status: 'processed' },
+        { id: 2, date: '2024-11-27', bank: 'KGB', filename: 'kerala_oct.xlsx', transactions: 89, amount: 287500, status: 'processed' },
+        { id: 3, date: '2024-11-26', bank: 'Indian Bank', filename: 'indianbank_sep.xlsx', transactions: 67, amount: 198750, status: 'processed' },
+        { id: 4, date: '2024-11-25', bank: 'IOB', filename: 'statement_aug.csv', transactions: 52, amount: 164320, status: 'pending' },
+        { id: 5, date: '2024-11-24', bank: 'KGB', filename: 'kerala_jul.xlsx', transactions: 78, amount: 234650, status: 'processed' },
+      ]);
+      setLoading(false);
+    }, 500);
   }, [token]);
 
   const filteredStatements = statements.filter(stmt => {
@@ -995,10 +1130,6 @@ const StatementsView = ({ token, showNotification }) => {
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-full lg:w-64"
               />
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors duration-300 flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              <span className="hidden sm:inline">Filter</span>
-            </button>
           </div>
         </div>
 
@@ -1019,81 +1150,95 @@ const StatementsView = ({ token, showNotification }) => {
           ))}
         </div>
 
-        {/* Statements Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Date</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Bank</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Filename</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Transactions</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStatements.map((stmt, index) => (
-                <tr 
-                  key={stmt.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
-                  style={{ animation: `fadeInUp 0.4s ease-out ${index * 0.1}s backwards` }}
-                >
-                  <td className="py-4 px-4 text-gray-600">{stmt.date}</td>
-                  <td className="py-4 px-4">
-                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-100 text-blue-700 text-sm font-medium">
-                      <FileText className="w-4 h-4" />
-                      {stmt.bank}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-gray-900 font-medium">{stmt.filename}</td>
-                  <td className="py-4 px-4 text-gray-600">{stmt.transactions}</td>
-                  <td className="py-4 px-4 text-gray-900 font-semibold">₹{stmt.amount.toLocaleString('en-IN')}</td>
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-                      stmt.status === 'processed'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {stmt.status === 'processed' ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <Activity className="w-4 h-4 animate-spin" />
-                      )}
-                      {stmt.status.charAt(0).toUpperCase() + stmt.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <button className="text-blue-600 hover:text-blue-700 transition-colors duration-200">
-                      <Download className="w-5 h-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Empty State */}
-        {filteredStatements.length === 0 && (
+        {/* Loading State */}
+        {loading ? (
           <div className="text-center py-12">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600">No statements found</p>
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading statements...</p>
           </div>
+        ) : (
+          <>
+            {/* Statements Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Bank</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Filename</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Transactions</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStatements.map((stmt, index) => (
+                    <tr
+                      key={stmt.id}
+                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
+                      style={{ animation: `fadeInUp 0.4s ease-out ${index * 0.1}s backwards` }}
+                    >
+                      <td className="py-4 px-4 text-gray-600">{stmt.date}</td>
+                      <td className="py-4 px-4">
+                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-100 text-blue-700 text-sm font-medium">
+                          <FileText className="w-4 h-4" />
+                          {stmt.bank}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-gray-900 font-medium">{stmt.filename}</td>
+                      <td className="py-4 px-4 text-gray-600">{stmt.transactions}</td>
+                      <td className="py-4 px-4 text-gray-900 font-semibold">₹{stmt.amount.toLocaleString('en-IN')}</td>
+                      <td className="py-4 px-4">
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                          stmt.status === 'processed'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {stmt.status === 'processed' ? (
+                            <CheckCircle className="w-4 h-4" />
+                          ) : (
+                            <Activity className="w-4 h-4 animate-spin" />
+                          )}
+                          {stmt.status.charAt(0).toUpperCase() + stmt.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <button
+                          className="text-blue-600 hover:text-blue-700 transition-colors duration-200"
+                          onClick={() => showNotification('Download feature coming soon!', 'info')}
+                        >
+                          <Download className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Empty State */}
+            {filteredStatements.length === 0 && (
+              <div className="text-center py-12">
+                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600">No statements found</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 };
-// User Management View
+
+// ==================== USER MANAGEMENT VIEW ====================
 const UserManagementView = ({ token, showNotification, setCurrentView, setUser, setToken }) => {
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
     confirmPassword: '',
-    roleIds: [2], // Default to USER role (id: 2)
-    selectedRole: 'user' // 'user' or 'admin'
+    roleIds: [2], // Default to USER role
+    selectedRole: 'user'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -1103,71 +1248,36 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
   // Calculate password strength
   const calculatePasswordStrength = (password) => {
     let strength = 0;
-
     if (password.length >= 8) strength += 25;
     if (password.length >= 12) strength += 15;
     if (/[a-z]/.test(password)) strength += 15;
     if (/[A-Z]/.test(password)) strength += 15;
     if (/[0-9]/.test(password)) strength += 15;
     if (/[^a-zA-Z0-9]/.test(password)) strength += 15;
-
     return Math.min(strength, 100);
   };
 
-  // Get strength color
   const getStrengthColor = (strength) => {
     if (strength < 40) return 'bg-red-500';
     if (strength < 70) return 'bg-yellow-500';
     return 'bg-emerald-500';
   };
 
-  // Get strength text
   const getStrengthText = (strength) => {
     if (strength < 40) return 'Weak';
     if (strength < 70) return 'Medium';
     return 'Strong';
   };
 
-  // Generate secure password
-  const generatePassword = () => {
-    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const numbers = '0123456789';
-    const special = '!@#$%^&*';
-    const allChars = lowercase + uppercase + numbers + special;
-
-    let password = '';
-    // Ensure at least one of each type
-    password += lowercase[Math.floor(Math.random() * lowercase.length)];
-    password += uppercase[Math.floor(Math.random() * uppercase.length)];
-    password += numbers[Math.floor(Math.random() * numbers.length)];
-    password += special[Math.floor(Math.random() * special.length)];
-
-    // Fill the rest randomly
-    for (let i = 4; i < 16; i++) {
-      password += allChars[Math.floor(Math.random() * allChars.length)];
-    }
-
-    // Shuffle the password
-    password = password.split('').sort(() => Math.random() - 0.5).join('');
-
-    setNewUser({ ...newUser, password, confirmPassword: password });
-    setPasswordStrength(calculatePasswordStrength(password));
-    showNotification('Secure password generated!', 'success');
-  };
-
-  // Copy password to clipboard
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     showNotification('Password copied to clipboard!', 'success');
   };
 
-  // Update password strength when password changes
   useEffect(() => {
     setPasswordStrength(calculatePasswordStrength(newUser.password));
   }, [newUser.password]);
 
-  // Password requirements check
   const requirements = [
     { label: 'At least 8 characters', met: newUser.password.length >= 8 },
     { label: 'Uppercase letter', met: /[A-Z]/.test(newUser.password) },
@@ -1178,7 +1288,8 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    // Validate token before API call
+
+    // Validate token
     if (!token) {
       showNotification('Session expired. Please login again.', 'error');
       setTimeout(() => {
@@ -1186,14 +1297,15 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
       }, 2000);
       return;
     }
+
     // Validation
     if (newUser.username.length < 3) {
       showNotification('Username must be at least 3 characters long', 'error');
       return;
     }
 
-    if (newUser.password.length < 8) {
-      showNotification('Password must be at least 8 characters long', 'error');
+    if (newUser.password.length < CONFIG.PASSWORD_MIN_LENGTH) {
+      showNotification(`Password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters long`, 'error');
       return;
     }
 
@@ -1217,37 +1329,49 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          username: newUser.username,
+          username: sanitizeInput(newUser.username),
           password: newUser.password,
           roleIds: newUser.roleIds
         }),
       });
 
-      const data = await response.json();
+      let data = null;
+      if (response.ok || response.headers.get('content-type')?.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          data = { message: 'Invalid response from server' };
+        }
+      }
 
       if (response.ok) {
         const roleText = newUser.selectedRole === 'admin' ? 'Administrator' : 'User';
         showNotification(`${roleText} "${newUser.username}" created successfully!`, 'success');
+
+        // Reset form
         setNewUser({
           username: '',
           password: '',
           confirmPassword: '',
           roleIds: [2],
-          selectedRole: 'user'  // Reset to default role
+          selectedRole: 'user'
         });
-
         setPasswordStrength(0);
       } else {
-        // Handle specific error codes
+        // Handle errors
         if (response.status === 403) {
           showNotification('Access denied. Only administrators can create users.', 'error');
-        } else if (response.status === 409 || (data.message && data.message.includes('already exists'))) {
+        } else if (response.status === 401) {
+          showNotification('Session expired. Please login again.', 'error');
+          setTimeout(() => {
+            clearSessionAndRedirect(setCurrentView, setUser, setToken, null);
+          }, 1500);
+        } else if (response.status === 409 || (data?.message && data.message.includes('already exists'))) {
           showNotification('Username already exists. Please choose a different username.', 'error');
         } else {
-          showNotification(data.message || 'Failed to create user', 'error');
+          showNotification(data?.message || 'Failed to create user', 'error');
         }
       }
-
     } catch (error) {
       showNotification('Failed to create user. Please try again.', 'error');
     } finally {
@@ -1282,9 +1406,12 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
               placeholder="Enter username"
               className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
               required
+              minLength={3}
+              maxLength={50}
             />
           </div>
-          {/* ADD THIS NEW SECTION - Role Selection */}
+
+          {/* Role Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Role <span className="text-red-500">*</span>
@@ -1349,7 +1476,11 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
               </label>
               <button
                 type="button"
-                onClick={generatePassword}
+                onClick={() => {
+                  const password = generateSecurePassword();
+                  setNewUser({ ...newUser, password, confirmPassword: password });
+                  showNotification('Secure password generated!', 'success');
+                }}
                 className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -1364,6 +1495,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
                 placeholder="Enter password"
                 className="w-full px-4 py-3 pr-24 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
                 required
+                minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
                 <button
@@ -1431,6 +1563,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
                 placeholder="Confirm password"
                 className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
                 required
+                minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
               <button
                 type="button"
@@ -1481,7 +1614,8 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
     </div>
   );
 };
-// Change Password View
+
+// ==================== CHANGE PASSWORD VIEW ====================
 const ChangePasswordView = ({ token, user, showNotification, setCurrentView, setUser, setToken }) => {
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -1494,74 +1628,38 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
   const [changing, setChanging] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
-  // Calculate password strength
   const calculatePasswordStrength = (password) => {
     let strength = 0;
-
     if (password.length >= 8) strength += 25;
     if (password.length >= 12) strength += 15;
     if (/[a-z]/.test(password)) strength += 15;
     if (/[A-Z]/.test(password)) strength += 15;
     if (/[0-9]/.test(password)) strength += 15;
     if (/[^a-zA-Z0-9]/.test(password)) strength += 15;
-
     return Math.min(strength, 100);
   };
 
-  // Get strength color
   const getStrengthColor = (strength) => {
     if (strength < 40) return 'bg-red-500';
     if (strength < 70) return 'bg-yellow-500';
     return 'bg-emerald-500';
   };
 
-  // Get strength text
   const getStrengthText = (strength) => {
     if (strength < 40) return 'Weak';
     if (strength < 70) return 'Medium';
     return 'Strong';
   };
 
-  // Generate secure password
-  const generatePassword = () => {
-    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const numbers = '0123456789';
-    const special = '!@#$%^&*';
-    const allChars = lowercase + uppercase + numbers + special;
-
-    let password = '';
-    // Ensure at least one of each type
-    password += lowercase[Math.floor(Math.random() * lowercase.length)];
-    password += uppercase[Math.floor(Math.random() * uppercase.length)];
-    password += numbers[Math.floor(Math.random() * numbers.length)];
-    password += special[Math.floor(Math.random() * special.length)];
-
-    // Fill the rest randomly
-    for (let i = 4; i < 16; i++) {
-      password += allChars[Math.floor(Math.random() * allChars.length)];
-    }
-
-    // Shuffle the password
-    password = password.split('').sort(() => Math.random() - 0.5).join('');
-
-    setPasswordData({ ...passwordData, newPassword: password, confirmNewPassword: password });
-    setPasswordStrength(calculatePasswordStrength(password));
-    showNotification('Secure password generated!', 'success');
-  };
-
-  // Copy password to clipboard
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     showNotification('Password copied to clipboard!', 'success');
   };
 
-  // Update password strength when password changes
   useEffect(() => {
     setPasswordStrength(calculatePasswordStrength(passwordData.newPassword));
   }, [passwordData.newPassword]);
 
-  // Password requirements check
   const requirements = [
     { label: 'At least 8 characters', met: passwordData.newPassword.length >= 8 },
     { label: 'Uppercase letter', met: /[A-Z]/.test(passwordData.newPassword) },
@@ -1572,7 +1670,8 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    // Validate token before API call
+
+    // Validate token
     if (!token) {
       showNotification('Session expired. Please login again.', 'error');
       setTimeout(() => {
@@ -1580,14 +1679,15 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
       }, 2000);
       return;
     }
+
     // Validation
     if (!passwordData.currentPassword) {
       showNotification('Please enter your current password', 'error');
       return;
     }
 
-    if (passwordData.newPassword.length < 8) {
-      showNotification('New password must be at least 8 characters long', 'error');
+    if (passwordData.newPassword.length < CONFIG.PASSWORD_MIN_LENGTH) {
+      showNotification(`New password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters long`, 'error');
       return;
     }
 
@@ -1621,7 +1721,14 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
         }),
       });
 
-      const data = await response.json();
+      let data = null;
+      if (response.ok || response.headers.get('content-type')?.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          data = { message: 'Invalid response from server' };
+        }
+      }
 
       if (response.ok) {
         showNotification('Password changed successfully!', 'success');
@@ -1632,7 +1739,11 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
         });
         setPasswordStrength(0);
       } else {
-        showNotification(data.message || 'Failed to change password', 'error');
+        if (response.status === 401) {
+          showNotification('Session expired or current password incorrect. Please try again.', 'error');
+        } else {
+          showNotification(data?.message || 'Failed to change password', 'error');
+        }
       }
     } catch (error) {
       showNotification('Failed to change password. Please try again.', 'error');
@@ -1701,7 +1812,11 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
               </label>
               <button
                 type="button"
-                onClick={generatePassword}
+                onClick={() => {
+                  const password = generateSecurePassword();
+                  setPasswordData({ ...passwordData, newPassword: password, confirmNewPassword: password });
+                  showNotification('Secure password generated!', 'success');
+                }}
                 className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -1716,6 +1831,7 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
                 placeholder="Enter new password"
                 className="w-full px-4 py-3 pr-24 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
                 required
+                minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
                 <button
@@ -1783,6 +1899,7 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
                 placeholder="Confirm new password"
                 className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
                 required
+                minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
               <button
                 type="button"
@@ -1848,4 +1965,5 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
     </div>
   );
 };
+
 export default CipherBankUI;
