@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key, AlertTriangle, Clock } from 'lucide-react';
 
 // ==================== CONFIGURATION ====================
 // API Configuration - Use environment variables in production
@@ -8,46 +8,68 @@ const API_AUTH_URL = process.env.REACT_APP_API_AUTH_URL || 'https://testing.thep
 
 // Configuration constants
 const CONFIG = {
-  TOKEN_VALIDATION_INTERVAL: 300000, // 5 minutes (reduced from 30 seconds)
   NOTIFICATION_DURATION: 5000,
-  PASSWORD_MIN_LENGTH: 6, // Aligned with backend requirement
+  PASSWORD_MIN_LENGTH: 6,
   MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
   ALLOWED_FILE_EXTENSIONS: ['.csv', '.xls', '.xlsx', '.pdf'],
-  SESSION_TIMEOUT_WARNING: 120000, // 2 minutes before expiry
-  TOKEN_EXPIRY_TIME: 900000, // 15 minutes (from backend)
+  AUTO_REFRESH_THRESHOLD: 120000, // 2 minutes before expiry (as requested)
+  TOKEN_CHECK_INTERVAL: 60000, // Check every 1 minute
 };
 
 // ==================== UTILITY FUNCTIONS ====================
 
 /**
- * Validate JWT token format (for JWE tokens)
- * Note: We can't decode JWE tokens client-side, only validate format
+ * Check if token has expired based on expiration timestamp
  */
-const isTokenValid = (token) => {
-  if (!token || typeof token !== 'string' || token.trim().length === 0) {
-    return false;
-  }
+const isTokenExpired = (tokenExpiry) => {
+  if (!tokenExpiry) return true;
+  const now = Date.now();
+  return now >= tokenExpiry;
+};
 
-  // Check if it looks like a token (has at least 2 dots for JWE)
-  const parts = token.split('.');
-  if (parts.length < 3) {
-    return false;
-  }
+/**
+ * Check if token is about to expire (within threshold)
+ */
+const isTokenNearExpiry = (tokenExpiry, threshold = CONFIG.AUTO_REFRESH_THRESHOLD) => {
+  if (!tokenExpiry) return false;
+  const now = Date.now();
+  const timeUntilExpiry = tokenExpiry - now;
+  return timeUntilExpiry > 0 && timeUntilExpiry <= threshold;
+};
 
-  return true;
+/**
+ * Format time remaining until expiry
+ */
+const formatTimeRemaining = (tokenExpiry) => {
+  if (!tokenExpiry) return 'Unknown';
+  const now = Date.now();
+  const diff = tokenExpiry - now;
+
+  if (diff <= 0) return 'Expired';
+
+  const minutes = Math.floor(diff / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
 };
 
 /**
  * Clear session data and redirect to login
  */
-const clearSessionAndRedirect = (setCurrentView, setUser, setToken, showNotification, currentView) => {
+const clearSessionAndRedirect = (setCurrentView, setUser, setToken, setTokenExpiry, showNotification, currentView) => {
   localStorage.removeItem('cipherbank_token');
   localStorage.removeItem('cipherbank_user');
+  localStorage.removeItem('cipherbank_token_expiry');
+  localStorage.removeItem('cipherbank_credentials'); // Clear stored credentials
+
   setToken(null);
   setUser(null);
+  setTokenExpiry(null);
   setCurrentView('login');
 
-  // Only show notification if we're not already on login page
   if (showNotification && currentView !== 'login') {
     showNotification('Session expired. Please login again.', 'error');
   }
@@ -64,12 +86,10 @@ const validateFile = (file) => {
     return { valid: false, errors };
   }
 
-  // Check file size
   if (file.size > CONFIG.MAX_FILE_SIZE) {
     errors.push(`File size must be less than ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB`);
   }
 
-  // Check file extension (case-insensitive)
   const fileName = file.name.toLowerCase();
   const hasValidExtension = CONFIG.ALLOWED_FILE_EXTENSIONS.some(ext => fileName.endsWith(ext));
 
@@ -93,23 +113,19 @@ const generateSecurePassword = (length = 16) => {
   const special = '!@#$%^&*';
   const allChars = lowercase + uppercase + numbers + special;
 
-  // Use crypto API for secure random numbers
   const array = new Uint32Array(length);
   window.crypto.getRandomValues(array);
 
   let password = '';
-  // Ensure at least one of each type
   password += lowercase[array[0] % lowercase.length];
   password += uppercase[array[1] % uppercase.length];
   password += numbers[array[2] % numbers.length];
   password += special[array[3] % special.length];
 
-  // Fill the rest
   for (let i = 4; i < length; i++) {
     password += allChars[array[i] % allChars.length];
   }
 
-  // Shuffle using Fisher-Yates algorithm
   const passwordArray = password.split('');
   for (let i = passwordArray.length - 1; i > 0; i--) {
     const j = array[i] % (i + 1);
@@ -178,62 +194,159 @@ const CipherBankUI = () => {
   const [currentView, setCurrentView] = useState('login');
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [tokenExpiry, setTokenExpiry] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [notification, setNotification] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionWarningShown, setSessionWarningShown] = useState(false);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Use ref to store credentials for auto-refresh (only if user enables it)
+  const credentialsRef = useRef(null);
 
   // Check for existing session on mount
   useEffect(() => {
     const savedToken = localStorage.getItem('cipherbank_token');
     const savedUser = localStorage.getItem('cipherbank_user');
+    const savedExpiry = localStorage.getItem('cipherbank_token_expiry');
+    const savedCredentials = localStorage.getItem('cipherbank_credentials');
 
-    if (savedToken && savedUser) {
-      if (isTokenValid(savedToken)) {
+    if (savedToken && savedUser && savedExpiry) {
+      const expiryTime = parseInt(savedExpiry, 10);
+
+      // Check if token is still valid
+      if (!isTokenExpired(expiryTime)) {
         try {
           const userData = JSON.parse(savedUser);
           setToken(savedToken);
           setUser(userData);
+          setTokenExpiry(expiryTime);
           setCurrentView('dashboard');
+
+          // Restore credentials if auto-refresh was enabled
+          if (savedCredentials) {
+            try {
+              credentialsRef.current = JSON.parse(atob(savedCredentials));
+              setAutoRefreshEnabled(true);
+            } catch (e) {
+              localStorage.removeItem('cipherbank_credentials');
+            }
+          }
         } catch (error) {
           // Clear corrupted data
-          localStorage.removeItem('cipherbank_token');
-          localStorage.removeItem('cipherbank_user');
+          clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null, 'login');
         }
       } else {
-        // Clear invalid token
-        localStorage.removeItem('cipherbank_token');
-        localStorage.removeItem('cipherbank_user');
+        // Token expired
+        clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null, 'login');
       }
     }
   }, []);
 
-  // Periodic token validation (every 5 minutes instead of 30 seconds)
+  // Token expiry monitoring and auto-refresh
   useEffect(() => {
-    if (!token || currentView === 'login') return;
+    if (!token || !tokenExpiry || currentView === 'login') return;
 
-    const intervalId = setInterval(() => {
-      if (!isTokenValid(token)) {
-        clearSessionAndRedirect(setCurrentView, setUser, setToken, showNotification, currentView);
+    const checkTokenExpiry = () => {
+      const now = Date.now();
+
+      // Check if token has expired
+      if (isTokenExpired(tokenExpiry)) {
+        clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, showNotification, currentView);
+        return;
       }
-    }, CONFIG.TOKEN_VALIDATION_INTERVAL);
 
-    return () => clearInterval(intervalId);
-  }, [token, currentView]);
-
-  // Session timeout warning (show 2 minutes before expiry)
-  useEffect(() => {
-    if (!token || currentView === 'login') return;
-
-    const warningTimeout = setTimeout(() => {
-      if (!sessionWarningShown) {
-        showNotification('Your session will expire in 2 minutes. Please save your work.', 'warning');
+      // Check if token is near expiry and show warning
+      if (isTokenNearExpiry(tokenExpiry) && !sessionWarningShown) {
+        const timeRemaining = formatTimeRemaining(tokenExpiry);
+        showNotification(
+          `Your session will expire in ${timeRemaining}. ${autoRefreshEnabled ? 'Auto-refresh is enabled.' : 'Please save your work.'}`,
+          'warning'
+        );
         setSessionWarningShown(true);
       }
-    }, CONFIG.TOKEN_EXPIRY_TIME - CONFIG.SESSION_TIMEOUT_WARNING);
+    };
 
-    return () => clearTimeout(warningTimeout);
-  }, [token, currentView, sessionWarningShown]);
+    // Check immediately
+    checkTokenExpiry();
+
+    // Check every minute
+    const intervalId = setInterval(checkTokenExpiry, CONFIG.TOKEN_CHECK_INTERVAL);
+
+    return () => clearInterval(intervalId);
+  }, [token, tokenExpiry, currentView, sessionWarningShown, autoRefreshEnabled]);
+
+  // Auto-refresh token function
+  const refreshToken = useCallback(async () => {
+    if (!autoRefreshEnabled || !credentialsRef.current || isRefreshing) {
+      return false;
+    }
+
+    setIsRefreshing(true);
+
+    try {
+      const response = await fetch(`${API_AUTH_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentialsRef.current),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        if (data.token && data.tokenExpirationMillis) {
+          // Update token and expiry
+          setToken(data.token);
+          setTokenExpiry(data.tokenExpirationMillis);
+          localStorage.setItem('cipherbank_token', data.token);
+          localStorage.setItem('cipherbank_token_expiry', data.tokenExpirationMillis.toString());
+
+          // Update user data
+          const userData = {
+            username: data.username,
+            name: data.name,
+            roles: data.roles || ['ROLE_USER']
+          };
+          setUser(userData);
+          localStorage.setItem('cipherbank_user', JSON.stringify(userData));
+
+          // Reset warning flag
+          setSessionWarningShown(false);
+
+          showNotification('Token refreshed successfully', 'success');
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return false;
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [autoRefreshEnabled, isRefreshing]);
+
+  // Function to check and refresh token before API calls
+  const checkAndRefreshToken = useCallback(async () => {
+    if (!tokenExpiry) return true;
+
+    // If token is near expiry and auto-refresh is enabled, refresh it
+    if (isTokenNearExpiry(tokenExpiry) && autoRefreshEnabled) {
+      return await refreshToken();
+    }
+
+    // If token is expired, redirect to login
+    if (isTokenExpired(tokenExpiry)) {
+      clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, showNotification, currentView);
+      return false;
+    }
+
+    return true;
+  }, [tokenExpiry, autoRefreshEnabled, refreshToken, currentView]);
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
@@ -243,9 +356,16 @@ const CipherBankUI = () => {
   const handleLogout = () => {
     setUser(null);
     setToken(null);
+    setTokenExpiry(null);
     setSessionWarningShown(false);
+    setAutoRefreshEnabled(false);
+    credentialsRef.current = null;
+
     localStorage.removeItem('cipherbank_token');
     localStorage.removeItem('cipherbank_user');
+    localStorage.removeItem('cipherbank_token_expiry');
+    localStorage.removeItem('cipherbank_credentials');
+
     setCurrentView('login');
     showNotification('Logged out successfully', 'info');
   };
@@ -269,15 +389,41 @@ const CipherBankUI = () => {
           </div>
         )}
 
+        {/* Token Expiry Indicator (shown when logged in) */}
+        {token && tokenExpiry && currentView !== 'login' && (
+          <div className="fixed bottom-4 right-4 z-40">
+            <div className="bg-white rounded-xl shadow-lg p-3 flex items-center gap-3 border border-gray-200">
+              <Clock className="w-4 h-4 text-gray-600" />
+              <div className="text-sm">
+                <span className="text-gray-600">Session expires in: </span>
+                <span className={`font-semibold ${
+                  isTokenNearExpiry(tokenExpiry) ? 'text-red-600' : 'text-gray-900'
+                }`}>
+                  {formatTimeRemaining(tokenExpiry)}
+                </span>
+              </div>
+              {autoRefreshEnabled && (
+                <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-green-100 rounded-lg">
+                  <RefreshCw className="w-3 h-3 text-green-600" />
+                  <span className="text-xs text-green-700 font-medium">Auto-refresh ON</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Main Content */}
         {currentView === 'login' && (
           <LoginView
             setCurrentView={setCurrentView}
             setUser={setUser}
             setToken={setToken}
+            setTokenExpiry={setTokenExpiry}
             showNotification={showNotification}
             setIsLoading={setIsLoading}
             setSessionWarningShown={setSessionWarningShown}
+            setAutoRefreshEnabled={setAutoRefreshEnabled}
+            credentialsRef={credentialsRef}
           />
         )}
 
@@ -287,21 +433,29 @@ const CipherBankUI = () => {
             setCurrentView={setCurrentView}
             user={user}
             token={token}
+            tokenExpiry={tokenExpiry}
             setUser={setUser}
             setToken={setToken}
+            setTokenExpiry={setTokenExpiry}
             handleLogout={handleLogout}
             showNotification={showNotification}
             isMenuOpen={isMenuOpen}
             setIsMenuOpen={setIsMenuOpen}
+            checkAndRefreshToken={checkAndRefreshToken}
+            autoRefreshEnabled={autoRefreshEnabled}
+            setAutoRefreshEnabled={setAutoRefreshEnabled}
+            credentialsRef={credentialsRef}
           />
         )}
 
         {/* Loading Overlay */}
-        {isLoading && (
+        {(isLoading || isRefreshing) && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="bg-white rounded-2xl p-8 shadow-2xl">
               <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-              <p className="mt-4 text-gray-600 font-medium">Processing...</p>
+              <p className="mt-4 text-gray-600 font-medium">
+                {isRefreshing ? 'Refreshing session...' : 'Processing...'}
+              </p>
             </div>
           </div>
         )}
@@ -366,11 +520,13 @@ const CipherBankUI = () => {
 };
 
 // ==================== LOGIN VIEW ====================
-const LoginView = ({ setCurrentView, setUser, setToken, showNotification, setIsLoading, setSessionWarningShown }) => {
+const LoginView = ({ setCurrentView, setUser, setToken, setTokenExpiry, showNotification, setIsLoading, setSessionWarningShown, setAutoRefreshEnabled, credentialsRef }) => {
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   });
+  const [rememberMe, setRememberMe] = useState(false);
+  const [enableAutoRefresh, setEnableAutoRefresh] = useState(false);
 
   const validateForm = () => {
     if (!formData.username || formData.username.trim().length < 3) {
@@ -379,7 +535,7 @@ const LoginView = ({ setCurrentView, setUser, setToken, showNotification, setIsL
     }
 
     if (!formData.password || formData.password.length < CONFIG.PASSWORD_MIN_LENGTH) {
-      showNotification(`Password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters long`, 'error');
+      showNotification(`Password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters long', 'error');
       return false;
     }
 
@@ -396,20 +552,21 @@ const LoginView = ({ setCurrentView, setUser, setToken, showNotification, setIsL
     setIsLoading(true);
 
     try {
+      const credentials = {
+        username: sanitizeInput(formData.username),
+        password: formData.password
+      };
+
       const response = await fetch(`${API_AUTH_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          username: sanitizeInput(formData.username),
-          password: formData.password // Don't sanitize password
-        }),
+        body: JSON.stringify(credentials),
       });
 
       let data = null;
 
-      // Only parse JSON if response is OK or has content
       if (response.ok || response.headers.get('content-type')?.includes('application/json')) {
         try {
           data = await response.json();
@@ -424,22 +581,40 @@ const LoginView = ({ setCurrentView, setUser, setToken, showNotification, setIsL
           return;
         }
 
-        // Set token and user
-        setToken(data.token);
-        localStorage.setItem('cipherbank_token', data.token);
+        // Use actual token expiration from backend
+        const tokenExpirationMillis = data.tokenExpirationMillis || (Date.now() + (data.tokenValidityMillis || 7200000));
 
+        // Set token, expiry, and user
+        setToken(data.token);
+        setTokenExpiry(tokenExpirationMillis);
+        localStorage.setItem('cipherbank_token', data.token);
+        localStorage.setItem('cipherbank_token_expiry', tokenExpirationMillis.toString());
+
+        // Store user data including name field
         const userData = {
           username: data.username || formData.username,
+          name: data.name || data.username, // Use 'name' field from response
           roles: data.roles || ['ROLE_USER']
         };
         setUser(userData);
         localStorage.setItem('cipherbank_user', JSON.stringify(userData));
-        setSessionWarningShown(false); // Reset session warning
 
-        showNotification('Login successful!', 'success');
+        // Handle auto-refresh setup
+        if (enableAutoRefresh) {
+          credentialsRef.current = credentials;
+          localStorage.setItem('cipherbank_credentials', btoa(JSON.stringify(credentials)));
+          setAutoRefreshEnabled(true);
+        } else {
+          credentialsRef.current = null;
+          localStorage.removeItem('cipherbank_credentials');
+          setAutoRefreshEnabled(false);
+        }
+
+        setSessionWarningShown(false);
+
+        showNotification(`Welcome ${data.name || data.username}! Session valid for ${Math.round((data.tokenValidityMillis || 7200000) / 60000)} minutes.`, 'success');
         setCurrentView('dashboard');
       } else {
-        // Handle errors
         let errorMessage;
 
         switch (response.status) {
@@ -523,6 +698,32 @@ const LoginView = ({ setCurrentView, setUser, setToken, showNotification, setIsL
               />
             </div>
 
+            {/* Auto-Refresh Option */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="autoRefresh"
+                  checked={enableAutoRefresh}
+                  onChange={(e) => setEnableAutoRefresh(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex-1">
+                  <label htmlFor="autoRefresh" className="text-sm font-semibold text-gray-900 cursor-pointer flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4" />
+                    Enable Auto Token Refresh
+                  </label>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Automatically refresh your session when it's about to expire (within last 2 minutes).
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-2 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Credentials stored locally (use only on trusted devices)
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <button
               type="submit"
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
@@ -541,13 +742,32 @@ const LoginView = ({ setCurrentView, setUser, setToken, showNotification, setIsL
 };
 
 // ==================== DASHBOARD LAYOUT ====================
-const DashboardLayout = ({ currentView, setCurrentView, user, token, setUser, setToken, handleLogout, showNotification, isMenuOpen, setIsMenuOpen }) => {
+const DashboardLayout = ({ currentView, setCurrentView, user, token, tokenExpiry, setUser, setToken, setTokenExpiry, handleLogout, showNotification, isMenuOpen, setIsMenuOpen, checkAndRefreshToken, autoRefreshEnabled, setAutoRefreshEnabled, credentialsRef }) => {
   // Validate token on protected pages
   useEffect(() => {
-    if (!token) {
+    if (!token || !tokenExpiry) {
       setCurrentView('login');
+      return;
     }
-  }, [currentView, token, setCurrentView]);
+
+    // Check if token is expired
+    if (isTokenExpired(tokenExpiry)) {
+      clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, showNotification, currentView);
+    }
+  }, [currentView, token, tokenExpiry]);
+
+  // Function to toggle auto-refresh
+  const toggleAutoRefresh = () => {
+    if (autoRefreshEnabled) {
+      // Disable auto-refresh
+      setAutoRefreshEnabled(false);
+      credentialsRef.current = null;
+      localStorage.removeItem('cipherbank_credentials');
+      showNotification('Auto-refresh disabled', 'info');
+    } else {
+      showNotification('Please re-login to enable auto-refresh', 'info');
+    }
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -558,16 +778,18 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, setUser, se
         handleLogout={handleLogout}
         isMenuOpen={isMenuOpen}
         setIsMenuOpen={setIsMenuOpen}
+        autoRefreshEnabled={autoRefreshEnabled}
+        toggleAutoRefresh={toggleAutoRefresh}
       />
 
       <div className="flex-1 lg:ml-72">
-        <Header user={user} setIsMenuOpen={setIsMenuOpen} />
+        <Header user={user} setIsMenuOpen={setIsMenuOpen} tokenExpiry={tokenExpiry} />
         <main className="p-6 lg:p-8">
-          {currentView === 'dashboard' && <Dashboard token={token} showNotification={showNotification} />}
-          {currentView === 'upload' && <UploadView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} user={user} />}
-          {currentView === 'statements' && <StatementsView token={token} showNotification={showNotification} />}
-          {currentView === 'users' && <UserManagementView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} />}
-          {currentView === 'changepassword' && <ChangePasswordView token={token} user={user} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} />}
+          {currentView === 'dashboard' && <Dashboard token={token} showNotification={showNotification} checkAndRefreshToken={checkAndRefreshToken} />}
+          {currentView === 'upload' && <UploadView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} setTokenExpiry={setTokenExpiry} user={user} checkAndRefreshToken={checkAndRefreshToken} />}
+          {currentView === 'statements' && <StatementsView token={token} showNotification={showNotification} checkAndRefreshToken={checkAndRefreshToken} />}
+          {currentView === 'users' && <UserManagementView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} setTokenExpiry={setTokenExpiry} checkAndRefreshToken={checkAndRefreshToken} />}
+          {currentView === 'changepassword' && <ChangePasswordView token={token} user={user} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} setTokenExpiry={setTokenExpiry} checkAndRefreshToken={checkAndRefreshToken} />}
         </main>
       </div>
     </div>
@@ -575,7 +797,7 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, setUser, se
 };
 
 // ==================== SIDEBAR COMPONENT ====================
-const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, setIsMenuOpen }) => {
+const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, setIsMenuOpen, autoRefreshEnabled, toggleAutoRefresh }) => {
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') || false;
 
   const menuItems = [
@@ -620,18 +842,34 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
         </div>
 
         {/* User Info */}
-        <div className="bg-white/10 rounded-xl p-4 mb-8 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
+        <div className="bg-white/10 rounded-xl p-4 mb-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center">
               <Users className="w-5 h-5" />
             </div>
-            <div>
-              <p className="font-semibold truncate">{user?.username || 'User'}</p>
+            <div className="flex-1">
+              <p className="font-semibold truncate">{user?.name || user?.username || 'User'}</p>
               <p className="text-xs text-gray-400">
                 {isAdmin ? 'Administrator' : 'User'}
               </p>
             </div>
           </div>
+
+          {/* Auto-Refresh Toggle */}
+          <button
+            onClick={toggleAutoRefresh}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+              autoRefreshEnabled
+                ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <RefreshCw className="w-3 h-3" />
+              Auto-Refresh
+            </span>
+            <span className="font-semibold">{autoRefreshEnabled ? 'ON' : 'OFF'}</span>
+          </button>
         </div>
 
         {/* Navigation */}
@@ -675,7 +913,7 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
 };
 
 // ==================== HEADER COMPONENT ====================
-const Header = ({ user, setIsMenuOpen }) => {
+const Header = ({ user, setIsMenuOpen, tokenExpiry }) => {
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 lg:px-8">
       <div className="flex items-center justify-between">
@@ -687,7 +925,9 @@ const Header = ({ user, setIsMenuOpen }) => {
         </button>
 
         <div className="flex-1 lg:flex-none">
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.username}!</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {user?.name || user?.username}!
+          </h1>
           <p className="text-sm text-gray-600 mt-1">Manage your bank statements efficiently</p>
         </div>
       </div>
@@ -696,7 +936,7 @@ const Header = ({ user, setIsMenuOpen }) => {
 };
 
 // ==================== DASHBOARD VIEW ====================
-const Dashboard = ({ token, showNotification }) => {
+const Dashboard = ({ token, showNotification, checkAndRefreshToken }) => {
   const [stats, setStats] = useState({
     totalUploads: 0,
     totalTransactions: 0,
@@ -830,7 +1070,7 @@ const Dashboard = ({ token, showNotification }) => {
 };
 
 // ==================== UPLOAD VIEW ====================
-const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken, user }) => {
+const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken, setTokenExpiry, user, checkAndRefreshToken }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadData, setUploadData] = useState({
     parserKey: 'iob',
@@ -881,17 +1121,21 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
       return;
     }
 
-    // Validate file again before upload
     const validation = validateFile(uploadData.file);
     if (!validation.valid) {
       validation.errors.forEach(error => showNotification(error, 'error'));
       return;
     }
 
-    // Validate account number for IOB
     if (uploadData.parserKey === 'iob' && !uploadData.accountNo) {
       showNotification('Account number is required for IOB statements', 'error');
       return;
+    }
+
+    // ✅ CHECK AND REFRESH TOKEN BEFORE API CALL
+    const tokenValid = await checkAndRefreshToken();
+    if (!tokenValid) {
+      return; // Token refresh failed or expired
     }
 
     setUploading(true);
@@ -913,11 +1157,10 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
         body: formData
       });
 
-      // Check for authentication errors
       if (response.status === 401 || response.status === 403) {
         showNotification('Session expired. Please login again.', 'error');
         setTimeout(() => {
-          clearSessionAndRedirect(setCurrentView, setUser, setToken, null, 'upload');
+          clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null, 'upload');
         }, 1500);
         return;
       }
@@ -929,7 +1172,6 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
           `Upload successful! Processed ${data.rowsParsed} rows (${data.rowsInserted} new, ${data.rowsDeduped} duplicates)`,
           'success'
         );
-        // Reset form
         setUploadData({ ...uploadData, file: null, accountNo: '' });
       } else {
         showNotification(data.message || 'Upload failed', 'error');
@@ -949,7 +1191,6 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
           Upload CSV, XLS, XLSX, or PDF bank statements for processing (Max {CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB)
         </p>
 
-        {/* Bank Selection */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-gray-700 mb-3">Select Bank</label>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -978,7 +1219,6 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
           </div>
         </div>
 
-        {/* Account Number (required for IOB) */}
         {uploadData.parserKey === 'iob' && (
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -996,7 +1236,6 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
           </div>
         )}
 
-        {/* File Upload Area */}
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -1056,7 +1295,6 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
           </div>
         </div>
 
-        {/* Upload Button */}
         <button
           onClick={handleUpload}
           disabled={!uploadData.file || uploading}
@@ -1081,7 +1319,7 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
 };
 
 // ==================== STATEMENTS VIEW ====================
-const StatementsView = ({ token, showNotification }) => {
+const StatementsView = ({ token, showNotification, checkAndRefreshToken }) => {
   const [statements, setStatements] = useState([]);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1089,7 +1327,6 @@ const StatementsView = ({ token, showNotification }) => {
 
   useEffect(() => {
     // TODO: Replace with actual API call to fetch statements
-    // For now, using mock data
     setTimeout(() => {
       setStatements([
         { id: 1, date: '2024-11-28', bank: 'IOB', filename: 'statement_nov.csv', transactions: 45, amount: 125000, status: 'processed' },
@@ -1112,7 +1349,6 @@ const StatementsView = ({ token, showNotification }) => {
   return (
     <div className="animate-fadeInUp">
       <div className="glass-effect rounded-2xl p-6 lg:p-8">
-        {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Statement History</h2>
@@ -1133,7 +1369,6 @@ const StatementsView = ({ token, showNotification }) => {
           </div>
         </div>
 
-        {/* Filter Tabs */}
         <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
           {['all', 'processed', 'pending'].map((status) => (
             <button
@@ -1150,7 +1385,6 @@ const StatementsView = ({ token, showNotification }) => {
           ))}
         </div>
 
-        {/* Loading State */}
         {loading ? (
           <div className="text-center py-12">
             <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
@@ -1158,7 +1392,6 @@ const StatementsView = ({ token, showNotification }) => {
           </div>
         ) : (
           <>
-            {/* Statements Table */}
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -1217,7 +1450,6 @@ const StatementsView = ({ token, showNotification }) => {
               </table>
             </div>
 
-            {/* Empty State */}
             {filteredStatements.length === 0 && (
               <div className="text-center py-12">
                 <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -1232,12 +1464,12 @@ const StatementsView = ({ token, showNotification }) => {
 };
 
 // ==================== USER MANAGEMENT VIEW ====================
-const UserManagementView = ({ token, showNotification, setCurrentView, setUser, setToken }) => {
+const UserManagementView = ({ token, showNotification, setCurrentView, setUser, setToken, setTokenExpiry, checkAndRefreshToken }) => {
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
     confirmPassword: '',
-    roleIds: [2], // Default to USER role
+    roleIds: [2],
     selectedRole: 'user'
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -1245,7 +1477,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
   const [creating, setCreating] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
-  // Calculate password strength
   const calculatePasswordStrength = (password) => {
     let strength = 0;
     if (password.length >= 8) strength += 25;
@@ -1289,16 +1520,14 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
   const handleCreateUser = async (e) => {
     e.preventDefault();
 
-    // Validate token
     if (!token) {
       showNotification('Session expired. Please login again.', 'error');
       setTimeout(() => {
-        clearSessionAndRedirect(setCurrentView, setUser, setToken, null);
+        clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null);
       }, 2000);
       return;
     }
 
-    // Validation
     if (newUser.username.length < 3) {
       showNotification('Username must be at least 3 characters long', 'error');
       return;
@@ -1316,6 +1545,12 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
 
     if (passwordStrength < 40) {
       showNotification('Password is too weak. Please use a stronger password.', 'error');
+      return;
+    }
+
+    // ✅ CHECK AND REFRESH TOKEN BEFORE API CALL
+    const tokenValid = await checkAndRefreshToken();
+    if (!tokenValid) {
       return;
     }
 
@@ -1348,7 +1583,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
         const roleText = newUser.selectedRole === 'admin' ? 'Administrator' : 'User';
         showNotification(`${roleText} "${newUser.username}" created successfully!`, 'success');
 
-        // Reset form
         setNewUser({
           username: '',
           password: '',
@@ -1358,13 +1592,12 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
         });
         setPasswordStrength(0);
       } else {
-        // Handle errors
         if (response.status === 403) {
           showNotification('Access denied. Only administrators can create users.', 'error');
         } else if (response.status === 401) {
           showNotification('Session expired. Please login again.', 'error');
           setTimeout(() => {
-            clearSessionAndRedirect(setCurrentView, setUser, setToken, null);
+            clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null);
           }, 1500);
         } else if (response.status === 409 || (data?.message && data.message.includes('already exists'))) {
           showNotification('Username already exists. Please choose a different username.', 'error');
@@ -1382,7 +1615,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
   return (
     <div className="max-w-4xl mx-auto animate-fadeInUp">
       <div className="glass-effect rounded-2xl p-8 lg:p-10">
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center">
             <Users className="w-8 h-8 text-white" />
@@ -1394,7 +1626,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
         </div>
 
         <form onSubmit={handleCreateUser} className="space-y-6">
-          {/* Username */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Username <span className="text-red-500">*</span>
@@ -1411,7 +1642,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
             />
           </div>
 
-          {/* Role Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Role <span className="text-red-500">*</span>
@@ -1468,7 +1698,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
             </p>
           </div>
 
-          {/* Password */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-semibold text-gray-700">
@@ -1516,7 +1745,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
               </div>
             </div>
 
-            {/* Password Strength Meter */}
             {newUser.password && (
               <div className="mt-3">
                 <div className="flex items-center justify-between mb-2">
@@ -1537,7 +1765,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
               </div>
             )}
 
-            {/* Password Requirements */}
             <div className="mt-4 space-y-2">
               {requirements.map((req, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -1550,7 +1777,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
             </div>
           </div>
 
-          {/* Confirm Password */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Confirm Password <span className="text-red-500">*</span>
@@ -1590,7 +1816,6 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
             )}
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={creating || passwordStrength < 40}
@@ -1616,7 +1841,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
 };
 
 // ==================== CHANGE PASSWORD VIEW ====================
-const ChangePasswordView = ({ token, user, showNotification, setCurrentView, setUser, setToken }) => {
+const ChangePasswordView = ({ token, user, showNotification, setCurrentView, setUser, setToken, setTokenExpiry, checkAndRefreshToken }) => {
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -1671,16 +1896,14 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
   const handleChangePassword = async (e) => {
     e.preventDefault();
 
-    // Validate token
     if (!token) {
       showNotification('Session expired. Please login again.', 'error');
       setTimeout(() => {
-        clearSessionAndRedirect(setCurrentView, setUser, setToken, null);
+        clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null);
       }, 2000);
       return;
     }
 
-    // Validation
     if (!passwordData.currentPassword) {
       showNotification('Please enter your current password', 'error');
       return;
@@ -1703,6 +1926,12 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
 
     if (passwordData.currentPassword === passwordData.newPassword) {
       showNotification('New password must be different from current password', 'error');
+      return;
+    }
+
+    // ✅ CHECK AND REFRESH TOKEN BEFORE API CALL
+    const tokenValid = await checkAndRefreshToken();
+    if (!tokenValid) {
       return;
     }
 
@@ -1755,7 +1984,6 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
   return (
     <div className="max-w-4xl mx-auto animate-fadeInUp">
       <div className="glass-effect rounded-2xl p-8 lg:p-10">
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
             <Key className="w-8 h-8 text-white" />
@@ -1766,7 +1994,6 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
           </div>
         </div>
 
-        {/* User Info */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
@@ -1774,13 +2001,12 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
             </div>
             <div>
               <p className="text-sm text-gray-600">Changing password for</p>
-              <p className="font-semibold text-gray-900">{user?.username}</p>
+              <p className="font-semibold text-gray-900">{user?.name || user?.username}</p>
             </div>
           </div>
         </div>
 
         <form onSubmit={handleChangePassword} className="space-y-6">
-          {/* Current Password */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Current Password <span className="text-red-500">*</span>
@@ -1804,7 +2030,6 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
             </div>
           </div>
 
-          {/* New Password */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-semibold text-gray-700">
@@ -1852,7 +2077,6 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
               </div>
             </div>
 
-            {/* Password Strength Meter */}
             {passwordData.newPassword && (
               <div className="mt-3">
                 <div className="flex items-center justify-between mb-2">
@@ -1873,7 +2097,6 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
               </div>
             )}
 
-            {/* Password Requirements */}
             <div className="mt-4 space-y-2">
               {requirements.map((req, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -1886,7 +2109,6 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
             </div>
           </div>
 
-          {/* Confirm New Password */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Confirm New Password <span className="text-red-500">*</span>
@@ -1926,7 +2148,6 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
             )}
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={changing || passwordStrength < 40}
@@ -1947,7 +2168,6 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
           </button>
         </form>
 
-        {/* Security Tip */}
         <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
           <div className="flex gap-3">
             <Shield className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
