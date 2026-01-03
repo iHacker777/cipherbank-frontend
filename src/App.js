@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key, AlertTriangle, Clock, ArrowUpDown, Calendar } from 'lucide-react';
 import IOSInstallPrompt from './components/IOSInstallPrompt';
 import BottomTabBar from './components/BottomTabBar';
-import './ios-styles.css';
-import './ios-modern-styles.css';
+import './ios26-liquid-glass.css';
 import haptics from './utils/ios-haptics';
 
 
@@ -125,7 +124,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="max-w-md w-full lg-card p-8 text-center">
             <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
             <p className="text-gray-600 mb-6">
@@ -133,7 +132,7 @@ class ErrorBoundary extends React.Component {
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+              className="lg-btn lg-btn-primary"
             >
               Refresh Page
             </button>
@@ -145,8 +144,6 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// ==================== BOTTOM TAB BAR COMPONENT (iOS) ====================
-// Removed - now using separate component from ./components/BottomTabBar
 // ==================== MAIN APP COMPONENT ====================
 const CipherBankUI = () => {
   const [currentView, setCurrentView] = useState('login');
@@ -303,7 +300,6 @@ const CipherBankUI = () => {
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
 
-    // Trigger haptic feedback
     if (type === 'success') {
       haptics.success();
     } else if (type === 'error') {
@@ -334,45 +330,40 @@ const CipherBankUI = () => {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="app-container">
         <IOSInstallPrompt />
 
-        {/* Notification Toast - iOS 18 Style */}
+        {/* Notification Toast - iOS 26 Liquid Glass Style */}
         {notification && (
-          <div className={`ios-notification ios-notification-${notification.type} animate-scale-in`}>
-            <div className="ios-notification-content">
-              <div className="ios-notification-icon">
+          <div className={`notification notification-${notification.type}`}>
+            <div className="notification-content">
+              <div className="notification-icon">
                 {notification.type === 'success' && <CheckCircle size={20} />}
                 {notification.type === 'error' && <XCircle size={20} />}
                 {notification.type === 'warning' && <AlertTriangle size={20} />}
                 {notification.type === 'info' && <Clock size={20} />}
               </div>
-              <span style={{ fontWeight: 500, fontSize: '15px', letterSpacing: '-0.2px' }}>
-                {notification.message}
-              </span>
+              <span className="notification-text">{notification.message}</span>
             </div>
           </div>
         )}
 
+        {/* Session Expiry Indicator */}
         {token && tokenExpiry && currentView !== 'login' && (
-          <div className="fixed bottom-4 right-4 z-40">
-            <div className="bg-white rounded-xl shadow-lg p-3 flex items-center gap-3 border border-gray-200">
-              <Clock className="w-4 h-4 text-gray-600" />
-              <div className="text-sm">
-                <span className="text-gray-600">Session expires in: </span>
-                <span className={`font-semibold ${
-                  isTokenNearExpiry(tokenExpiry) ? 'text-red-600' : 'text-gray-900'
-                }`}>
-                  {formatTimeRemaining(tokenExpiry)}
-                </span>
-              </div>
-              {autoRefreshEnabled && (
-                <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-green-100 rounded-lg">
-                  <RefreshCw className="w-3 h-3 text-green-600" />
-                  <span className="text-xs text-green-700 font-medium">Auto-refresh ON</span>
-                </div>
-              )}
+          <div className="session-indicator desktop-only">
+            <Clock className="w-4 h-4" />
+            <div className="text-sm">
+              <span>Session: </span>
+              <span className={isTokenNearExpiry(tokenExpiry) ? 'text-red-500 font-semibold' : ''}>
+                {formatTimeRemaining(tokenExpiry)}
+              </span>
             </div>
+            {autoRefreshEnabled && (
+              <div className="auto-refresh-badge">
+                <RefreshCw className="w-3 h-3" />
+                <span>Auto</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -411,7 +402,7 @@ const CipherBankUI = () => {
           />
         )}
 
-        {/* Bottom Tab Bar - iOS only */}
+        {/* Bottom Tab Bar - iOS 26 Floating Style */}
         {currentView !== 'login' && (
           <BottomTabBar
             currentView={currentView}
@@ -420,47 +411,17 @@ const CipherBankUI = () => {
           />
         )}
 
+        {/* Loading Overlay */}
         {(isLoading || isRefreshing) && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="bg-white rounded-2xl p-8 shadow-2xl">
-              <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-              <p className="mt-4 text-gray-600 font-medium">
+          <div className="loading-overlay">
+            <div className="loading-card lg-card">
+              <div className="loading-spinner"></div>
+              <p className="loading-text">
                 {isRefreshing ? 'Refreshing session...' : 'Processing...'}
               </p>
             </div>
           </div>
         )}
-
-        <style>{`
-          @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-          }
-          @keyframes fadeInUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-          }
-          .animate-slideInRight { animation: slideInRight 0.4s ease-out; }
-          .animate-fadeInUp { animation: fadeInUp 0.6s ease-out; }
-          .hover-lift {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          }
-          .hover-lift:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-          }
-          .glass-effect {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-          }
-          .gradient-text {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-        `}</style>
       </div>
     </ErrorBoundary>
   );
@@ -469,7 +430,6 @@ const CipherBankUI = () => {
 // ==================== LOGIN VIEW ====================
 const LoginView = ({ setCurrentView, setUser, setToken, setTokenExpiry, showNotification, setIsLoading, setSessionWarningShown, setAutoRefreshEnabled, credentialsRef }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
-  const [rememberMe, setRememberMe] = useState(false);
   const [enableAutoRefresh, setEnableAutoRefresh] = useState(false);
 
   const validateForm = () => {
@@ -548,7 +508,7 @@ const LoginView = ({ setCurrentView, setUser, setToken, setTokenExpiry, showNoti
         }
 
         setSessionWarningShown(false);
-        showNotification(`Welcome ${data.name || data.username}! Session valid for ${Math.round((data.tokenValidityMillis || 7200000) / 60000)} minutes.`, 'success');
+        showNotification(`Welcome ${data.name || data.username}!`, 'success');
         setCurrentView('dashboard');
       } else {
         haptics.error();
@@ -572,92 +532,86 @@ const LoginView = ({ setCurrentView, setUser, setToken, setTokenExpiry, showNoti
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-96 h-96 bg-blue-200/30 rounded-full blur-3xl -top-48 -left-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-purple-200/30 rounded-full blur-3xl -bottom-48 -right-48 animate-pulse" style={{animationDelay: '1s'}}></div>
+    <div className="login-container">
+      {/* Background Effects */}
+      <div className="login-background">
+        <div className="bg-orb bg-orb-1"></div>
+        <div className="bg-orb bg-orb-2"></div>
       </div>
 
-      <div className="w-full max-w-md relative animate-fadeInUp">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-xl mb-4 hover-lift">
+      <div className="login-content">
+        {/* Logo */}
+        <div className="login-logo">
+          <div className="logo-icon">
             <Shield className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-4xl font-bold gradient-text mb-2">Cipher Bank</h1>
-          <p className="text-gray-600">Secure & Automated Statement Parsing</p>
+          <h1 className="logo-title">CipherBank</h1>
+          <p className="logo-subtitle">Secure Statement Parsing</p>
         </div>
 
-        <div className="glass-effect rounded-3xl shadow-2xl p-8 hover-lift">
-          <div className="mb-8">
-            <div className="text-center py-3">
-              <h2 className="text-xl font-semibold text-gray-800">Sign In to CipherBank</h2>
-            </div>
-          </div>
+        {/* Login Card */}
+        <div className="lg-card login-card">
+          <h2 className="login-heading">Sign In</h2>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="relative">
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
               <input
                 type="text"
                 placeholder="Username"
                 value={formData.username}
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
                 onFocus={() => haptics.light()}
-                className="ios-input"
+                className="lg-input"
                 required
                 minLength={3}
                 maxLength={50}
               />
             </div>
 
-            <div className="relative">
+            <div className="form-group">
               <input
                 type="password"
                 placeholder="Password"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 onFocus={() => haptics.light()}
-                className="ios-input"
+                className="lg-input"
                 required
                 minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <div className="flex items-start gap-3">
+            <div className="auto-refresh-option">
+              <label className="checkbox-label">
                 <input
                   type="checkbox"
-                  id="autoRefresh"
                   checked={enableAutoRefresh}
                   onChange={(e) => {
                     haptics.selection();
                     setEnableAutoRefresh(e.target.checked);
                   }}
-                  className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  className="checkbox-input"
                 />
-                <div className="flex-1">
-                  <label htmlFor="autoRefresh" className="text-sm font-semibold text-gray-900 cursor-pointer flex items-center gap-2">
+                <div className="checkbox-content">
+                  <span className="checkbox-title">
                     <RefreshCw className="w-4 h-4" />
-                    Remember this session!
-                  </label>
-                  <p className="text-xs text-yellow-700 mt-2 flex items-center gap-1">
+                    Remember Session
+                  </span>
+                  <span className="checkbox-warning">
                     <AlertTriangle className="w-3 h-3" />
-                    Use only on trusted devices!
-                  </p>
+                    Trusted devices only
+                  </span>
                 </div>
-              </div>
+              </label>
             </div>
 
-            <button
-              type="submit"
-              onClick={() => haptics.medium()}
-              className="ios-button w-full"
-            >
+            <button type="submit" className="lg-btn lg-btn-primary w-full">
               Sign In
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>BETA V1</p>
+          <div className="login-footer">
+            <p>CipherBank v2.0</p>
           </div>
         </div>
       </div>
@@ -689,7 +643,8 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, tokenExpiry
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="dashboard-layout">
+      {/* Desktop Sidebar */}
       <Sidebar
         currentView={currentView}
         setCurrentView={setCurrentView}
@@ -701,9 +656,10 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, tokenExpiry
         toggleAutoRefresh={toggleAutoRefresh}
       />
 
-      <div className="flex-1 main-content-wrapper lg:ml-72">
-        <Header user={user} setIsMenuOpen={setIsMenuOpen} tokenExpiry={tokenExpiry} />
-        <main className="p-6 lg:p-8">
+      {/* Main Content */}
+      <div className="main-content">
+        <Header user={user} setIsMenuOpen={setIsMenuOpen} />
+        <main className="content-area">
           {currentView === 'dashboard' && <Dashboard token={token} user={user} showNotification={showNotification} checkAndRefreshToken={checkAndRefreshToken} />}
           {currentView === 'upload' && <UploadView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} setTokenExpiry={setTokenExpiry} user={user} checkAndRefreshToken={checkAndRefreshToken} />}
           {currentView === 'statements' && <StatementsView token={token} showNotification={showNotification} checkAndRefreshToken={checkAndRefreshToken} />}
@@ -721,73 +677,59 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Activity },
-    { id: 'upload', label: 'Upload Statement', icon: Upload },
+    { id: 'upload', label: 'Upload', icon: Upload },
     { id: 'statements', label: 'Statements', icon: FileText },
-    ...(isAdmin ? [{ id: 'users', label: 'User Management', icon: Users }] : []),
-    { id: 'changepassword', label: 'Change Password', icon: Key },
+    ...(isAdmin ? [{ id: 'users', label: 'Users', icon: Users }] : []),
+    { id: 'changepassword', label: 'Settings', icon: Key },
   ];
 
   return (
     <>
+      {/* Mobile Overlay */}
       {isMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsMenuOpen(false)}
-        ></div>
+        <div className="sidebar-overlay" onClick={() => setIsMenuOpen(false)} />
       )}
-      <aside className={`desktop-sidebar fixed top-0 left-0 h-full w-72 bg-gradient-to-b from-slate-900 to-slate-800 text-white p-6 z-50 transition-transform duration-300 ${
-        isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}>
-        <button
-          onClick={() => setIsMenuOpen(false)}
-          className="lg:hidden absolute top-6 right-6 text-white"
-        >
+
+      {/* Sidebar */}
+      <aside className={`sidebar ${isMenuOpen ? 'sidebar-open' : ''}`}>
+        <button className="sidebar-close" onClick={() => setIsMenuOpen(false)}>
           <X className="w-6 h-6" />
         </button>
 
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+        {/* Logo */}
+        <div className="sidebar-logo">
+          <div className="sidebar-logo-icon">
             <Shield className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">CipherBank</h2>
-            <p className="text-xs text-gray-400">Automated Parsing</p>
+            <h2 className="sidebar-logo-title">CipherBank</h2>
+            <p className="sidebar-logo-subtitle">Automated Parsing</p>
           </div>
         </div>
 
-        <div className="bg-white/10 rounded-xl p-4 mb-6 backdrop-blur-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center">
+        {/* User Info */}
+        <div className="sidebar-user">
+          <div className="sidebar-user-info">
+            <div className="sidebar-user-avatar">
               <Users className="w-5 h-5" />
             </div>
-            <div className="flex-1">
-              <p className="font-semibold truncate">{user?.name || user?.username || 'User'}</p>
-              <p className="text-xs text-gray-400">
-                {isAdmin ? 'Administrator' : 'User'}
-              </p>
+            <div className="sidebar-user-details">
+              <p className="sidebar-user-name">{user?.name || user?.username || 'User'}</p>
+              <p className="sidebar-user-role">{isAdmin ? 'Administrator' : 'User'}</p>
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              haptics.light();
-              toggleAutoRefresh();
-            }}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
-              autoRefreshEnabled
-                ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
-                : 'bg-white/5 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            <span className="flex items-center gap-2">
+          <button onClick={() => { haptics.light(); toggleAutoRefresh(); }} className={`auto-refresh-toggle ${autoRefreshEnabled ? 'active' : ''}`}>
+            <span className="toggle-label">
               <RefreshCw className="w-3 h-3" />
               Auto-Refresh
             </span>
-            <span className="font-semibold">{autoRefreshEnabled ? 'ON' : 'OFF'}</span>
+            <span className="toggle-status">{autoRefreshEnabled ? 'ON' : 'OFF'}</span>
           </button>
         </div>
 
-        <nav className="space-y-2">
+        {/* Navigation */}
+        <nav className="sidebar-nav">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
@@ -800,29 +742,20 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
                   setCurrentView(item.id);
                   setIsMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg'
-                    : 'hover:bg-white/10'
-                }`}
+                className={`nav-item ${isActive ? 'nav-item-active' : ''}`}
               >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
-                {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+                <Icon className="nav-item-icon" />
+                <span className="nav-item-label">{item.label}</span>
+                {isActive && <ChevronRight className="nav-item-arrow" />}
               </button>
             );
           })}
         </nav>
 
-        <button
-          onClick={() => {
-            haptics.medium();
-            handleLogout();
-          }}
-          className="absolute bottom-6 left-6 right-6 flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 transition-all duration-300"
-        >
+        {/* Logout */}
+        <button onClick={() => { haptics.medium(); handleLogout(); }} className="sidebar-logout">
           <LogOut className="w-5 h-5" />
-          <span className="font-medium">Logout</span>
+          <span>Logout</span>
         </button>
       </aside>
     </>
@@ -830,26 +763,15 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
 };
 
 // ==================== HEADER COMPONENT ====================
-const Header = ({ user, setIsMenuOpen, tokenExpiry }) => {
+const Header = ({ user, setIsMenuOpen }) => {
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 lg:px-8">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => {
-            haptics.light();
-            setIsMenuOpen(true);
-          }}
-          className="lg:hidden text-gray-600 hover:text-gray-900"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-
-        <div className="flex-1 lg:flex-none">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, {user?.name || user?.username}!
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">Manage your bank statements efficiently</p>
-        </div>
+    <header className="header">
+      <button onClick={() => { haptics.light(); setIsMenuOpen(true); }} className="header-menu-btn">
+        <Menu className="w-6 h-6" />
+      </button>
+      <div className="header-content">
+        <h1 className="header-title">Welcome, {user?.name || user?.username}!</h1>
+        <p className="header-subtitle">Manage your bank statements</p>
       </div>
     </header>
   );
@@ -880,86 +802,73 @@ const Dashboard = ({ token, user, showNotification, checkAndRefreshToken }) => {
   }, [token]);
 
   return (
-    <div className="space-y-6 animate-fadeInUp">
-      {/* Modern Welcome Header */}
-      <div className="ios-welcome-header animate-fade-in">
-        <h1 className="ios-welcome-title">
-          Welcome, {user?.name || user?.username}
-        </h1>
-        <p className="ios-welcome-subtitle">
-          Manage your bank statements efficiently
-        </p>
+    <div className="dashboard">
+      {/* Welcome Header - iOS 26 Style */}
+      <div className="welcome-header">
+        <h1 className="welcome-title">Welcome, {user?.name || user?.username}</h1>
+        <p className="welcome-subtitle">Manage your bank statements efficiently</p>
       </div>
 
-      {/* Stats Grid - Fixed for mobile */}
+      {/* Stats Grid - 2 cols mobile, 4 cols desktop */}
       <div className="stats-grid">
         {[
-          { title: 'Total Uploads', value: stats.totalUploads, icon: Upload, bgColor: 'bg-blue-50' },
-          { title: 'Transactions', value: stats.totalTransactions, icon: ArrowUpDown, bgColor: 'bg-purple-50' },
-          { title: 'Success Rate', value: stats.successRate, icon: TrendingUp, bgColor: 'bg-emerald-50' },
-          { title: 'This Month', value: stats.thisMonth, icon: Calendar, bgColor: 'bg-orange-50' }
+          { title: 'Uploads', value: stats.totalUploads, icon: Upload, color: 'blue' },
+          { title: 'Transactions', value: stats.totalTransactions, icon: ArrowUpDown, color: 'purple' },
+          { title: 'Success Rate', value: stats.successRate, icon: TrendingUp, color: 'green' },
+          { title: 'This Month', value: stats.thisMonth, icon: Calendar, color: 'orange' }
         ].map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div
-              key={stat.title}
-              className="stat-card animate-fade-in-up"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center`}>
-                  <Icon className="w-6 h-6 text-blue-600" />
-                </div>
+            <div key={stat.title} className="stat-card" style={{ animationDelay: `${index * 0.1}s` }}>
+              <div className={`stat-icon stat-icon-${stat.color}`}>
+                <Icon className="w-6 h-6" />
               </div>
-              <h3 className="text-gray-600 text-sm mb-1 font-medium">{stat.title}</h3>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+              <div className="stat-content">
+                <p className="stat-title">{stat.title}</p>
+                <p className="stat-value">{stat.value}</p>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Recent Uploads - With iOS table wrapper */}
-      <div className="ios-card">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Recent Uploads</h2>
-          <button className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2">
-            View All
-            <ChevronRight className="w-4 h-4" />
+      {/* Recent Uploads Table */}
+      <div className="lg-card">
+        <div className="card-header">
+          <h2 className="card-title">Recent Uploads</h2>
+          <button className="card-action">
+            View All <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="ios-table-wrapper">
-          <table className="w-full">
+        <div className="table-wrapper">
+          <table className="data-table">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Bank</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Filename</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Date</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Rows</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+              <tr>
+                <th>Bank</th>
+                <th>Filename</th>
+                <th>Date</th>
+                <th>Rows</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {stats.recentUploads.map((upload, index) => (
-                <tr
-                  key={upload.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
-                  style={{ animation: `fadeInUp 0.4s ease-out ${index * 0.1}s backwards` }}
-                >
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-blue-600" />
+              {stats.recentUploads.map((upload) => (
+                <tr key={upload.id}>
+                  <td>
+                    <div className="table-cell-with-icon">
+                      <div className="table-icon">
+                        <FileText className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-gray-900">{upload.bank}</span>
+                      <span>{upload.bank}</span>
                     </div>
                   </td>
-                  <td className="py-4 px-4 text-gray-600">{upload.filename}</td>
-                  <td className="py-4 px-4 text-gray-600">{upload.date}</td>
-                  <td className="py-4 px-4 text-gray-600">{upload.rows}</td>
-                  <td className="py-4 px-4">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium">
-                      <CheckCircle className="w-4 h-4" />
+                  <td>{upload.filename}</td>
+                  <td>{upload.date}</td>
+                  <td>{upload.rows}</td>
+                  <td>
+                    <span className="badge badge-success">
+                      <CheckCircle className="w-3 h-3" />
                       Success
                     </span>
                   </td>
@@ -984,14 +893,8 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
   });
   const [uploading, setUploading] = useState(false);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = () => { setIsDragging(false); };
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -1032,13 +935,6 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
       return;
     }
 
-    const validation = validateFile(uploadData.file);
-    if (!validation.valid) {
-      haptics.error();
-      validation.errors.forEach(error => showNotification(error, 'error'));
-      return;
-    }
-
     if (uploadData.parserKey === 'iob' && !uploadData.accountNo) {
       haptics.warning();
       showNotification('Account number is required for IOB statements', 'error');
@@ -1056,9 +952,7 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
       formData.append('file', uploadData.file);
       formData.append('parserKey', uploadData.parserKey);
       formData.append('username', uploadData.username);
-      if (uploadData.accountNo) {
-        formData.append('accountNo', uploadData.accountNo);
-      }
+      if (uploadData.accountNo) formData.append('accountNo', uploadData.accountNo);
 
       const response = await fetch(`${API_BASE_URL}/statements/upload`, {
         method: 'POST',
@@ -1069,9 +963,7 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
       if (response.status === 401 || response.status === 403) {
         haptics.error();
         showNotification('Session expired. Please login again.', 'error');
-        setTimeout(() => {
-          clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null, 'upload');
-        }, 1500);
+        setTimeout(() => clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null, 'upload'), 1500);
         return;
       }
 
@@ -1079,10 +971,7 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
 
       if (response.ok) {
         haptics.success();
-        showNotification(
-          `Upload successful! Processed ${data.rowsParsed} rows (${data.rowsInserted} new, ${data.rowsDeduped} duplicates)`,
-          'success'
-        );
+        showNotification(`Upload successful! ${data.rowsParsed} rows processed`, 'success');
         setUploadData({ ...uploadData, file: null, accountNo: '' });
       } else {
         haptics.error();
@@ -1097,127 +986,93 @@ const UploadView = ({ token, showNotification, setCurrentView, setUser, setToken
   };
 
   return (
-    <div className="max-w-4xl mx-auto animate-fadeInUp">
-      <div className="ios-card">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Bank Statement</h2>
-        <p className="text-gray-600 mb-8">
-          Upload CSV, XLS, XLSX, or PDF bank statements for processing (Max {CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB)
-        </p>
+    <div className="upload-view">
+      <div className="lg-card">
+        <h2 className="card-title-lg">Upload Bank Statement</h2>
+        <p className="card-subtitle">Upload CSV, XLS, XLSX, or PDF (Max 10MB)</p>
 
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-gray-700 mb-3">Select Bank</label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Bank Selection */}
+        <div className="form-section">
+          <label className="form-label">Select Bank</label>
+          <div className="bank-grid">
             {['iob', 'kgb', 'indianbank'].map((bank) => (
               <button
                 key={bank}
-                onClick={() => {
-                  haptics.selection();
-                  setUploadData({ ...uploadData, parserKey: bank });
-                }}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                  uploadData.parserKey === bank
-                    ? 'border-blue-500 bg-blue-50 shadow-lg transform scale-105'
-                    : 'border-gray-200 hover:border-blue-300'
-                }`}
+                onClick={() => { haptics.selection(); setUploadData({ ...uploadData, parserKey: bank }); }}
+                className={`bank-option ${uploadData.parserKey === bank ? 'bank-option-active' : ''}`}
               >
-                <div className="font-semibold text-gray-900">
+                <span className="bank-name">
                   {bank === 'iob' && 'Indian Overseas Bank'}
                   {bank === 'kgb' && 'Kerala Gramin Bank'}
                   {bank === 'indianbank' && 'Indian Bank'}
-                </div>
-                <div className="text-sm text-gray-600 mt-1">
+                </span>
+                <span className="bank-format">
                   {bank === 'iob' && 'CSV Format'}
-                  {bank === 'kgb' && 'XLS/XLSX Format'}
-                  {bank === 'indianbank' && 'XLS/XLSX Format'}
-                </div>
+                  {bank === 'kgb' && 'XLS/XLSX'}
+                  {bank === 'indianbank' && 'XLS/XLSX'}
+                </span>
               </button>
             ))}
           </div>
         </div>
 
+        {/* Account Number for IOB */}
         {uploadData.parserKey === 'iob' && (
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Account Number <span className="text-red-500">*</span>
-            </label>
+          <div className="form-section">
+            <label className="form-label">Account Number <span className="required">*</span></label>
             <input
               type="text"
               value={uploadData.accountNo}
               onChange={(e) => setUploadData({ ...uploadData, accountNo: e.target.value })}
               onFocus={() => haptics.light()}
               placeholder="Enter account number"
-              className="ios-input"
+              className="lg-input"
               required
             />
-            <p className="text-sm text-gray-600 mt-2">Required for IOB statements</p>
           </div>
         )}
 
+        {/* File Drop Zone */}
         <div
-          className={`ios-file-upload ${uploadData.file ? 'has-file' : ''} ${isDragging ? 'border-blue-500 bg-blue-50' : ''}`}
+          className={`file-drop-zone ${uploadData.file ? 'has-file' : ''} ${isDragging ? 'dragging' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-            uploadData.file ? 'bg-emerald-100' : 'bg-blue-100'
-          }`}>
-            {uploadData.file ? (
-              <CheckCircle className="w-8 h-8 text-emerald-600" />
-            ) : (
-              <Upload className="w-8 h-8 text-blue-600" />
-            )}
+          <div className={`drop-icon ${uploadData.file ? 'success' : ''}`}>
+            {uploadData.file ? <CheckCircle className="w-8 h-8" /> : <Upload className="w-8 h-8" />}
           </div>
 
           {uploadData.file ? (
             <>
-              <p className="text-lg font-semibold text-gray-900">{uploadData.file.name}</p>
-              <p className="text-sm text-gray-600">{(uploadData.file.size / 1024).toFixed(2)} KB</p>
-              <button
-                onClick={() => {
-                  haptics.light();
-                  setUploadData({ ...uploadData, file: null });
-                }}
-                className="text-red-600 hover:text-red-700 font-medium text-sm"
-              >
+              <p className="file-name">{uploadData.file.name}</p>
+              <p className="file-size">{(uploadData.file.size / 1024).toFixed(2)} KB</p>
+              <button onClick={() => { haptics.light(); setUploadData({ ...uploadData, file: null }); }} className="remove-file">
                 Remove file
               </button>
             </>
           ) : (
             <>
-              <p className="text-lg font-semibold text-gray-900">Drop your file here</p>
-              <p className="text-sm text-gray-600 mb-2">or</p>
-              <label className="cursor-pointer">
-                <span className="ios-button">
-                  Browse Files
-                </span>
-                <input
-                  type="file"
-                  onChange={handleFileSelect}
-                  accept={CONFIG.ALLOWED_FILE_EXTENSIONS.join(',')}
-                  className="hidden"
-                />
+              <p className="drop-text">Drop your file here</p>
+              <p className="drop-or">or</p>
+              <label className="browse-btn">
+                <span className="lg-btn lg-btn-secondary">Browse Files</span>
+                <input type="file" onChange={handleFileSelect} accept={CONFIG.ALLOWED_FILE_EXTENSIONS.join(',')} className="hidden" />
               </label>
-              <p className="text-xs text-gray-500 mt-4">
-                CSV, XLS, XLSX, PDF (Max {CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB)
-              </p>
+              <p className="drop-hint">CSV, XLS, XLSX, PDF (Max 10MB)</p>
             </>
           )}
         </div>
 
+        {/* Upload Button */}
         <button
-          onClick={() => {
-            haptics.medium();
-            handleUpload();
-          }}
+          onClick={() => { haptics.medium(); handleUpload(); }}
           disabled={!uploadData.file || uploading}
-          className={`w-full mt-6 ios-button ${
-            !uploadData.file || uploading ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className={`lg-btn lg-btn-primary w-full ${(!uploadData.file || uploading) ? 'disabled' : ''}`}
         >
           {uploading ? (
-            <span className="flex items-center justify-center gap-3">
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <span className="btn-loading">
+              <span className="spinner"></span>
               Processing...
             </span>
           ) : (
@@ -1257,42 +1112,33 @@ const StatementsView = ({ token, showNotification, checkAndRefreshToken }) => {
   });
 
   return (
-    <div className="animate-fadeInUp">
-      <div className="ios-card">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
+    <div className="statements-view">
+      <div className="lg-card">
+        <div className="card-header-complex">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Statement History</h2>
-            <p className="text-gray-600 mt-1">View and manage all uploaded statements</p>
+            <h2 className="card-title-lg">Statement History</h2>
+            <p className="card-subtitle">View and manage uploaded statements</p>
           </div>
-
-          <div className="flex gap-3">
-            <div className="relative flex-1 lg:flex-none">
-              <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onFocus={() => haptics.light()}
-                placeholder="Search statements..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-full lg:w-64"
-              />
-            </div>
+          <div className="search-box">
+            <Search className="search-icon" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => haptics.light()}
+              placeholder="Search..."
+              className="search-input"
+            />
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {['all', 'pending', 'approved', 'rejected'].map((status) => (
+        {/* Filter Tabs */}
+        <div className="filter-tabs">
+          {['all', 'processed', 'pending'].map((status) => (
             <button
               key={status}
-              onClick={() => {
-                haptics.selection();
-                setFilter(status);
-              }}
-              className={`px-4 py-2 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
-                filter === status
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              onClick={() => { haptics.selection(); setFilter(status); }}
+              className={`filter-tab ${filter === status ? 'active' : ''}`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
@@ -1300,91 +1146,66 @@ const StatementsView = ({ token, showNotification, checkAndRefreshToken }) => {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading statements...</p>
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <p>Loading statements...</p>
           </div>
         ) : (
-          <>
-            <div className="ios-table-wrapper">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Date</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Bank</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Filename</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Transactions</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Bank</th>
+                  <th>Filename</th>
+                  <th>Transactions</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStatements.map((stmt) => (
+                  <tr key={stmt.id}>
+                    <td>{stmt.date}</td>
+                    <td>
+                      <span className="badge badge-info">
+                        <FileText className="w-3 h-3" />
+                        {stmt.bank}
+                      </span>
+                    </td>
+                    <td className="font-medium">{stmt.filename}</td>
+                    <td>{stmt.transactions}</td>
+                    <td className="font-semibold">₹{stmt.amount.toLocaleString('en-IN')}</td>
+                    <td>
+                      <span className={`badge ${stmt.status === 'processed' ? 'badge-success' : 'badge-warning'}`}>
+                        {stmt.status === 'processed' ? <CheckCircle className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
+                        {stmt.status}
+                      </span>
+                    </td>
+                    <td>
+                      <button onClick={() => { haptics.light(); showNotification('Download coming soon!', 'info'); }} className="action-btn">
+                        <Download className="w-5 h-5" />
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredStatements.map((stmt, index) => (
-                    <tr
-                      key={stmt.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
-                      style={{ animation: `fadeInUp 0.4s ease-out ${index * 0.1}s backwards` }}
-                    >
-                      <td className="py-4 px-4 text-gray-600">{stmt.date}</td>
-                      <td className="py-4 px-4">
-                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-100 text-blue-700 text-sm font-medium">
-                          <FileText className="w-4 h-4" />
-                          {stmt.bank}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-gray-900 font-medium">{stmt.filename}</td>
-                      <td className="py-4 px-4 text-gray-600">{stmt.transactions}</td>
-                      <td className="py-4 px-4 text-gray-900 font-semibold">₹{stmt.amount.toLocaleString('en-IN')}</td>
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-                          stmt.status === 'processed'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {stmt.status === 'processed' ? (
-                            <CheckCircle className="w-4 h-4" />
-                          ) : (
-                            <Activity className="w-4 h-4 animate-spin" />
-                          )}
-                          {stmt.status.charAt(0).toUpperCase() + stmt.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <button
-                          onClick={() => {
-                            haptics.light();
-                            showNotification('Download feature coming soon!', 'info');
-                          }}
-                          className="text-blue-600 hover:text-blue-700 transition-colors duration-200"
-                        >
-                          <Download className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-            {filteredStatements.length === 0 && (
-              <div className="text-center py-12">
-                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600">No statements found</p>
-              </div>
-            )}
-          </>
+        {!loading && filteredStatements.length === 0 && (
+          <div className="empty-state">
+            <FileText className="empty-icon" />
+            <p>No statements found</p>
+          </div>
         )}
       </div>
     </div>
   );
 };
 
-// Note: UserManagementView and ChangePasswordView remain the same as in your original file
-// I'm keeping them unchanged to preserve all the existing functionality
-
-
-// ==================== USER MANAGEMENT VIEW ====================
 // ==================== USER MANAGEMENT VIEW ====================
 const UserManagementView = ({ token, showNotification, setCurrentView, setUser, setToken, setTokenExpiry, checkAndRefreshToken }) => {
   const [newUser, setNewUser] = useState({
@@ -1410,71 +1231,32 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
     return Math.min(strength, 100);
   };
 
-  const getStrengthColor = (strength) => {
-    if (strength < 40) return 'bg-red-500';
-    if (strength < 70) return 'bg-yellow-500';
-    return 'bg-emerald-500';
-  };
-
-  const getStrengthText = (strength) => {
-    if (strength < 40) return 'Weak';
-    if (strength < 70) return 'Medium';
-    return 'Strong';
-  };
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    showNotification('Password copied to clipboard!', 'success');
-  };
-
   useEffect(() => {
     setPasswordStrength(calculatePasswordStrength(newUser.password));
   }, [newUser.password]);
 
-  const requirements = [
-    { label: 'At least 8 characters', met: newUser.password.length >= 8 },
-    { label: 'Uppercase letter', met: /[A-Z]/.test(newUser.password) },
-    { label: 'Lowercase letter', met: /[a-z]/.test(newUser.password) },
-    { label: 'Number', met: /[0-9]/.test(newUser.password) },
-    { label: 'Special character', met: /[^a-zA-Z0-9]/.test(newUser.password) },
-  ];
-
   const handleCreateUser = async (e) => {
     e.preventDefault();
 
-    if (!token) {
-      showNotification('Session expired. Please login again.', 'error');
-      setTimeout(() => {
-        clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null);
-      }, 2000);
-      return;
-    }
-
     if (newUser.username.length < 3) {
-      showNotification('Username must be at least 3 characters long', 'error');
+      showNotification('Username must be at least 3 characters', 'error');
       return;
     }
-
     if (newUser.password.length < CONFIG.PASSWORD_MIN_LENGTH) {
-      showNotification(`Password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters long`, 'error');
+      showNotification(`Password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters`, 'error');
       return;
     }
-
     if (newUser.password !== newUser.confirmPassword) {
       showNotification('Passwords do not match', 'error');
       return;
     }
-
     if (passwordStrength < 40) {
-      showNotification('Password is too weak. Please use a stronger password.', 'error');
+      showNotification('Password is too weak', 'error');
       return;
     }
 
-    // ✅ CHECK AND REFRESH TOKEN BEFORE API CALL
     const tokenValid = await checkAndRefreshToken();
-    if (!tokenValid) {
-      return;
-    }
+    if (!tokenValid) return;
 
     setCreating(true);
 
@@ -1492,269 +1274,137 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
         }),
       });
 
-      let data = null;
-      if (response.ok || response.headers.get('content-type')?.includes('application/json')) {
-        try {
-          data = await response.json();
-        } catch (jsonError) {
-          data = { message: 'Invalid response from server' };
-        }
-      }
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        const roleText = newUser.selectedRole === 'admin' ? 'Administrator' : 'User';
-        showNotification(`${roleText} "${newUser.username}" created successfully!`, 'success');
-
-        setNewUser({
-          username: '',
-          password: '',
-          confirmPassword: '',
-          roleIds: [2],
-          selectedRole: 'user'
-        });
-        setPasswordStrength(0);
+        showNotification(`User "${newUser.username}" created successfully!`, 'success');
+        setNewUser({ username: '', password: '', confirmPassword: '', roleIds: [2], selectedRole: 'user' });
       } else {
-        if (response.status === 403) {
-          showNotification('Access denied. Only administrators can create users.', 'error');
-        } else if (response.status === 401) {
-          showNotification('Session expired. Please login again.', 'error');
-          setTimeout(() => {
-            clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null);
-          }, 1500);
-        } else if (response.status === 409 || (data?.message && data.message.includes('already exists'))) {
-          showNotification('Username already exists. Please choose a different username.', 'error');
-        } else {
-          showNotification(data?.message || 'Failed to create user', 'error');
-        }
+        showNotification(data?.message || 'Failed to create user', 'error');
       }
     } catch (error) {
-      showNotification('Failed to create user. Please try again.', 'error');
+      showNotification('Failed to create user', 'error');
     } finally {
       setCreating(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto animate-fadeInUp">
-      <div className="glass-effect rounded-2xl p-8 lg:p-10">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center">
-            <Users className="w-8 h-8 text-white" />
+    <div className="user-management-view">
+      <div className="lg-card">
+        <div className="card-header-with-icon">
+          <div className="header-icon purple">
+            <Users className="w-8 h-8" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-            <p className="text-gray-600">Create new user accounts with secure credentials</p>
+            <h2 className="card-title-lg">User Management</h2>
+            <p className="card-subtitle">Create new user accounts</p>
           </div>
         </div>
 
-        <form onSubmit={handleCreateUser} className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Username <span className="text-red-500">*</span>
-            </label>
+        <form onSubmit={handleCreateUser} className="user-form">
+          <div className="form-section">
+            <label className="form-label">Username <span className="required">*</span></label>
             <input
               type="text"
               value={newUser.username}
               onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
               placeholder="Enter username"
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
+              className="lg-input"
               required
               minLength={3}
-              maxLength={50}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Role <span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="form-section">
+            <label className="form-label">Role <span className="required">*</span></label>
+            <div className="role-grid">
               <button
                 type="button"
-                onClick={() => { haptics.selection(); setNewUser({ ...newUser, selectedRole: 'user', roleIds: [2] })}}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                  newUser.selectedRole === 'user'
-                    ? 'border-blue-500 bg-blue-50 shadow-lg'
-                    : 'border-gray-200 hover:border-blue-300'
-                }`}
+                onClick={() => { haptics.selection(); setNewUser({ ...newUser, selectedRole: 'user', roleIds: [2] }); }}
+                className={`role-option ${newUser.selectedRole === 'user' ? 'active' : ''}`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    newUser.selectedRole === 'user' ? 'bg-blue-500' : 'bg-gray-300'
-                  }`}>
-                    <Users className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-semibold text-gray-900">User</div>
-                    <div className="text-sm text-gray-600">Standard access</div>
-                  </div>
+                <div className="role-icon blue"><Users className="w-5 h-5" /></div>
+                <div className="role-info">
+                  <span className="role-name">User</span>
+                  <span className="role-desc">Standard access</span>
                 </div>
               </button>
-
               <button
                 type="button"
-                onClick={() => { haptics.selection(); setNewUser({ ...newUser, selectedRole: 'admin', roleIds: [1, 2] })}}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                  newUser.selectedRole === 'admin'
-                    ? 'border-purple-500 bg-purple-50 shadow-lg'
-                    : 'border-gray-200 hover:border-purple-300'
-                }`}
+                onClick={() => { haptics.selection(); setNewUser({ ...newUser, selectedRole: 'admin', roleIds: [1, 2] }); }}
+                className={`role-option ${newUser.selectedRole === 'admin' ? 'active' : ''}`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    newUser.selectedRole === 'admin' ? 'bg-purple-500' : 'bg-gray-300'
-                  }`}>
-                    <Shield className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-semibold text-gray-900">Administrator</div>
-                    <div className="text-sm text-gray-600">Full access</div>
-                  </div>
+                <div className="role-icon purple"><Shield className="w-5 h-5" /></div>
+                <div className="role-info">
+                  <span className="role-name">Admin</span>
+                  <span className="role-desc">Full access</span>
                 </div>
               </button>
             </div>
-            <p className="text-sm text-gray-600 mt-2">
-              {newUser.selectedRole === 'admin'
-                ? '⚠️ Administrators can create users and access all features'
-                : 'Users can upload statements and view their data'}
-            </p>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-sm font-semibold text-gray-700">
-                Password <span className="text-red-500">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  const password = generateSecurePassword();
-                  setNewUser({ ...newUser, password, confirmPassword: password });
-                  showNotification('Secure password generated!', 'success');
-                }}
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Generate Password
+          <div className="form-section">
+            <div className="form-label-row">
+              <label className="form-label">Password <span className="required">*</span></label>
+              <button type="button" onClick={() => {
+                const pwd = generateSecurePassword();
+                setNewUser({ ...newUser, password: pwd, confirmPassword: pwd });
+                showNotification('Password generated!', 'success');
+              }} className="generate-btn">
+                <RefreshCw className="w-4 h-4" /> Generate
               </button>
             </div>
-            <div className="relative">
+            <div className="input-with-actions">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={newUser.password}
                 onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                 placeholder="Enter password"
-                className="w-full px-4 py-3 pr-24 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
+                className="lg-input"
                 required
-                minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => { haptics.light(); copyToClipboard(newUser.password)}}
-                  className="text-gray-400 hover:text-gray-600"
-                  disabled={!newUser.password}
-                >
-                  <Copy className="w-5 h-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { haptics.light(); setShowPassword(!showPassword)}}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+              <button type="button" onClick={() => { haptics.light(); navigator.clipboard.writeText(newUser.password); showNotification('Copied!', 'success'); }} className="input-action"><Copy className="w-5 h-5" /></button>
+              <button type="button" onClick={() => { haptics.light(); setShowPassword(!showPassword); }} className="input-action">
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
-
             {newUser.password && (
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Password Strength:</span>
-                  <span className={`text-sm font-semibold ${
-                    passwordStrength < 40 ? 'text-red-600' :
-                    passwordStrength < 70 ? 'text-yellow-600' : 'text-emerald-600'
-                  }`}>
-                    {getStrengthText(passwordStrength)}
-                  </span>
+              <div className="password-strength">
+                <div className="strength-bar">
+                  <div className={`strength-fill ${passwordStrength < 40 ? 'weak' : passwordStrength < 70 ? 'medium' : 'strong'}`} style={{ width: `${passwordStrength}%` }}></div>
                 </div>
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-300 ${getStrengthColor(passwordStrength)}`}
-                    style={{ width: `${passwordStrength}%` }}
-                  ></div>
-                </div>
+                <span className={`strength-text ${passwordStrength < 40 ? 'weak' : passwordStrength < 70 ? 'medium' : 'strong'}`}>
+                  {passwordStrength < 40 ? 'Weak' : passwordStrength < 70 ? 'Medium' : 'Strong'}
+                </span>
               </div>
             )}
-
-            <div className="mt-4 space-y-2">
-              {requirements.map((req, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <CheckCircle className={`w-4 h-4 ${req.met ? 'text-emerald-500' : 'text-gray-300'}`} />
-                  <span className={`text-sm ${req.met ? 'text-gray-700' : 'text-gray-400'}`}>
-                    {req.label}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Confirm Password <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
+          <div className="form-section">
+            <label className="form-label">Confirm Password <span className="required">*</span></label>
+            <div className="input-with-actions">
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={newUser.confirmPassword}
                 onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
                 placeholder="Confirm password"
-                className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
+                className="lg-input"
                 required
-                minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
-              <button
-                type="button"
-                onClick={() => { haptics.light(); setShowConfirmPassword(!showConfirmPassword)}}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
+              <button type="button" onClick={() => { haptics.light(); setShowConfirmPassword(!showConfirmPassword); }} className="input-action">
                 {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
             {newUser.confirmPassword && (
-              <div className="mt-2 flex items-center gap-2">
-                {newUser.password === newUser.confirmPassword ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-emerald-500" />
-                    <span className="text-sm text-emerald-600">Passwords match</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-4 h-4 text-red-500" />
-                    <span className="text-sm text-red-600">Passwords do not match</span>
-                  </>
-                )}
+              <div className={`password-match ${newUser.password === newUser.confirmPassword ? 'match' : 'no-match'}`}>
+                {newUser.password === newUser.confirmPassword ? <><CheckCircle className="w-4 h-4" /> Passwords match</> : <><XCircle className="w-4 h-4" /> Passwords don't match</>}
               </div>
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={creating || passwordStrength < 40}
-            className={`w-full py-4 rounded-xl font-semibold text-white transition-all duration-300 ${
-              !creating && passwordStrength >= 40
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:shadow-xl transform hover:scale-105'
-                : 'bg-gray-300 cursor-not-allowed'
-            }`}
-          >
-            {creating ? (
-              <span className="flex items-center justify-center gap-3">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Creating User...
-              </span>
-            ) : (
-              'Create User'
-            )}
+          <button type="submit" disabled={creating || passwordStrength < 40} className={`lg-btn lg-btn-primary w-full ${creating || passwordStrength < 40 ? 'disabled' : ''}`}>
+            {creating ? <><span className="spinner"></span> Creating...</> : 'Create User'}
           </button>
         </form>
       </div>
@@ -1764,11 +1414,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
 
 // ==================== CHANGE PASSWORD VIEW ====================
 const ChangePasswordView = ({ token, user, showNotification, setCurrentView, setUser, setToken, setTokenExpiry, checkAndRefreshToken }) => {
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmNewPassword: ''
-  });
+  const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -1786,76 +1432,36 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
     return Math.min(strength, 100);
   };
 
-  const getStrengthColor = (strength) => {
-    if (strength < 40) return 'bg-red-500';
-    if (strength < 70) return 'bg-yellow-500';
-    return 'bg-emerald-500';
-  };
-
-  const getStrengthText = (strength) => {
-    if (strength < 40) return 'Weak';
-    if (strength < 70) return 'Medium';
-    return 'Strong';
-  };
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    showNotification('Password copied to clipboard!', 'success');
-  };
-
   useEffect(() => {
     setPasswordStrength(calculatePasswordStrength(passwordData.newPassword));
   }, [passwordData.newPassword]);
 
-  const requirements = [
-    { label: 'At least 8 characters', met: passwordData.newPassword.length >= 8 },
-    { label: 'Uppercase letter', met: /[A-Z]/.test(passwordData.newPassword) },
-    { label: 'Lowercase letter', met: /[a-z]/.test(passwordData.newPassword) },
-    { label: 'Number', met: /[0-9]/.test(passwordData.newPassword) },
-    { label: 'Special character', met: /[^a-zA-Z0-9]/.test(passwordData.newPassword) },
-  ];
-
   const handleChangePassword = async (e) => {
     e.preventDefault();
 
-    if (!token) {
-      showNotification('Session expired. Please login again.', 'error');
-      setTimeout(() => {
-        clearSessionAndRedirect(setCurrentView, setUser, setToken, setTokenExpiry, null);
-      }, 2000);
-      return;
-    }
-
     if (!passwordData.currentPassword) {
-      showNotification('Please enter your current password', 'error');
+      showNotification('Enter current password', 'error');
       return;
     }
-
     if (passwordData.newPassword.length < CONFIG.PASSWORD_MIN_LENGTH) {
-      showNotification(`New password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters long`, 'error');
+      showNotification(`New password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters`, 'error');
       return;
     }
-
     if (passwordData.newPassword !== passwordData.confirmNewPassword) {
-      showNotification('New passwords do not match', 'error');
+      showNotification('Passwords do not match', 'error');
       return;
     }
-
     if (passwordStrength < 40) {
-      showNotification('New password is too weak. Please use a stronger password.', 'error');
+      showNotification('Password is too weak', 'error');
       return;
     }
-
     if (passwordData.currentPassword === passwordData.newPassword) {
-      showNotification('New password must be different from current password', 'error');
+      showNotification('New password must be different', 'error');
       return;
     }
 
-    // ✅ CHECK AND REFRESH TOKEN BEFORE API CALL
     const tokenValid = await checkAndRefreshToken();
-    if (!tokenValid) {
-      return;
-    }
+    if (!tokenValid) return;
 
     setChanging(true);
 
@@ -1872,235 +1478,133 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
         }),
       });
 
-      let data = null;
-      if (response.ok || response.headers.get('content-type')?.includes('application/json')) {
-        try {
-          data = await response.json();
-        } catch (jsonError) {
-          data = { message: 'Invalid response from server' };
-        }
-      }
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
         showNotification('Password changed successfully!', 'success');
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmNewPassword: ''
-        });
-        setPasswordStrength(0);
+        setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
       } else {
-        if (response.status === 401) {
-          showNotification('Session expired or current password incorrect. Please try again.', 'error');
-        } else {
-          showNotification(data?.message || 'Failed to change password', 'error');
-        }
+        showNotification(data?.message || 'Failed to change password', 'error');
       }
     } catch (error) {
-      showNotification('Failed to change password. Please try again.', 'error');
+      showNotification('Failed to change password', 'error');
     } finally {
       setChanging(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto animate-fadeInUp">
-      <div className="glass-effect rounded-2xl p-8 lg:p-10">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
-            <Key className="w-8 h-8 text-white" />
+    <div className="change-password-view">
+      <div className="lg-card">
+        <div className="card-header-with-icon">
+          <div className="header-icon indigo">
+            <Key className="w-8 h-8" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Change Password</h2>
-            <p className="text-gray-600">Update your account password securely</p>
+            <h2 className="card-title-lg">Change Password</h2>
+            <p className="card-subtitle">Update your account password</p>
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-              <Users className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Changing password for</p>
-              <p className="font-semibold text-gray-900">{user?.name || user?.username}</p>
-            </div>
+        <div className="user-info-banner">
+          <div className="user-avatar"><Users className="w-5 h-5" /></div>
+          <div>
+            <p className="user-label">Changing password for</p>
+            <p className="user-name">{user?.name || user?.username}</p>
           </div>
         </div>
 
-        <form onSubmit={handleChangePassword} className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Current Password <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
+        <form onSubmit={handleChangePassword} className="password-form">
+          <div className="form-section">
+            <label className="form-label">Current Password <span className="required">*</span></label>
+            <div className="input-with-actions">
               <input
                 type={showCurrentPassword ? 'text' : 'password'}
                 value={passwordData.currentPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                 placeholder="Enter current password"
-                className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
+                className="lg-input"
                 required
               />
-              <button
-                type="button"
-                onClick={() => { haptics.light(); setShowCurrentPassword(!showCurrentPassword)}}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
+              <button type="button" onClick={() => { haptics.light(); setShowCurrentPassword(!showCurrentPassword); }} className="input-action">
                 {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-sm font-semibold text-gray-700">
-                New Password <span className="text-red-500">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  const password = generateSecurePassword();
-                  setPasswordData({ ...passwordData, newPassword: password, confirmNewPassword: password });
-                  showNotification('Secure password generated!', 'success');
-                }}
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Generate Password
+          <div className="form-section">
+            <div className="form-label-row">
+              <label className="form-label">New Password <span className="required">*</span></label>
+              <button type="button" onClick={() => {
+                const pwd = generateSecurePassword();
+                setPasswordData({ ...passwordData, newPassword: pwd, confirmNewPassword: pwd });
+                showNotification('Password generated!', 'success');
+              }} className="generate-btn">
+                <RefreshCw className="w-4 h-4" /> Generate
               </button>
             </div>
-            <div className="relative">
+            <div className="input-with-actions">
               <input
                 type={showNewPassword ? 'text' : 'password'}
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                 placeholder="Enter new password"
-                className="w-full px-4 py-3 pr-24 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
+                className="lg-input"
                 required
-                minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => { haptics.light(); copyToClipboard(passwordData.newPassword)}}
-                  className="text-gray-400 hover:text-gray-600"
-                  disabled={!passwordData.newPassword}
-                >
-                  <Copy className="w-5 h-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { haptics.light(); setShowNewPassword(!showNewPassword)}}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+              <button type="button" onClick={() => { haptics.light(); navigator.clipboard.writeText(passwordData.newPassword); showNotification('Copied!', 'success'); }} className="input-action"><Copy className="w-5 h-5" /></button>
+              <button type="button" onClick={() => { haptics.light(); setShowNewPassword(!showNewPassword); }} className="input-action">
+                {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
-
             {passwordData.newPassword && (
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Password Strength:</span>
-                  <span className={`text-sm font-semibold ${
-                    passwordStrength < 40 ? 'text-red-600' :
-                    passwordStrength < 70 ? 'text-yellow-600' : 'text-emerald-600'
-                  }`}>
-                    {getStrengthText(passwordStrength)}
-                  </span>
+              <div className="password-strength">
+                <div className="strength-bar">
+                  <div className={`strength-fill ${passwordStrength < 40 ? 'weak' : passwordStrength < 70 ? 'medium' : 'strong'}`} style={{ width: `${passwordStrength}%` }}></div>
                 </div>
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-300 ${getStrengthColor(passwordStrength)}`}
-                    style={{ width: `${passwordStrength}%` }}
-                  ></div>
-                </div>
+                <span className={`strength-text ${passwordStrength < 40 ? 'weak' : passwordStrength < 70 ? 'medium' : 'strong'}`}>
+                  {passwordStrength < 40 ? 'Weak' : passwordStrength < 70 ? 'Medium' : 'Strong'}
+                </span>
               </div>
             )}
-
-            <div className="mt-4 space-y-2">
-              {requirements.map((req, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <CheckCircle className={`w-4 h-4 ${req.met ? 'text-emerald-500' : 'text-gray-300'}`} />
-                  <span className={`text-sm ${req.met ? 'text-gray-700' : 'text-gray-400'}`}>
-                    {req.label}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Confirm New Password <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
+          <div className="form-section">
+            <label className="form-label">Confirm New Password <span className="required">*</span></label>
+            <div className="input-with-actions">
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={passwordData.confirmNewPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, confirmNewPassword: e.target.value })}
                 placeholder="Confirm new password"
-                className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all duration-300"
+                className="lg-input"
                 required
-                minLength={CONFIG.PASSWORD_MIN_LENGTH}
               />
-              <button
-                type="button"
-                onClick={() => { haptics.light(); setShowConfirmPassword(!showConfirmPassword)}}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
+              <button type="button" onClick={() => { haptics.light(); setShowConfirmPassword(!showConfirmPassword); }} className="input-action">
                 {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
             {passwordData.confirmNewPassword && (
-              <div className="mt-2 flex items-center gap-2">
-                {passwordData.newPassword === passwordData.confirmNewPassword ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-emerald-500" />
-                    <span className="text-sm text-emerald-600">Passwords match</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-4 h-4 text-red-500" />
-                    <span className="text-sm text-red-600">Passwords do not match</span>
-                  </>
-                )}
+              <div className={`password-match ${passwordData.newPassword === passwordData.confirmNewPassword ? 'match' : 'no-match'}`}>
+                {passwordData.newPassword === passwordData.confirmNewPassword ? <><CheckCircle className="w-4 h-4" /> Passwords match</> : <><XCircle className="w-4 h-4" /> Passwords don't match</>}
               </div>
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={changing || passwordStrength < 40}
-            className={`w-full py-4 rounded-xl font-semibold text-white transition-all duration-300 ${
-              !changing && passwordStrength >= 40
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-xl transform hover:scale-105'
-                : 'bg-gray-300 cursor-not-allowed'
-            }`}
-          >
-            {changing ? (
-              <span className="flex items-center justify-center gap-3">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Changing Password...
-              </span>
-            ) : (
-              'Change Password'
-            )}
+          <button type="submit" disabled={changing || passwordStrength < 40} className={`lg-btn lg-btn-primary w-full ${changing || passwordStrength < 40 ? 'disabled' : ''}`}>
+            {changing ? <><span className="spinner"></span> Changing...</> : 'Change Password'}
           </button>
         </form>
 
-        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-          <div className="flex gap-3">
-            <Shield className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-yellow-800 mb-1">Security Tips</p>
-              <ul className="text-sm text-yellow-700 space-y-1">
-                <li>• Use a unique password you don't use anywhere else</li>
-                <li>• Consider using a password manager</li>
-                <li>• Change your password regularly</li>
-              </ul>
-            </div>
+        <div className="security-tips">
+          <Shield className="tips-icon" />
+          <div>
+            <p className="tips-title">Security Tips</p>
+            <ul className="tips-list">
+              <li>Use a unique password</li>
+              <li>Consider a password manager</li>
+              <li>Change regularly</li>
+            </ul>
           </div>
         </div>
       </div>

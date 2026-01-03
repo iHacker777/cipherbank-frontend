@@ -12,32 +12,22 @@ const IOSInstallPrompt = () => {
   const [isSafari, setIsSafari] = useState(false);
 
   useEffect(() => {
-    // Detect iOS device
     const userAgent = window.navigator.userAgent.toLowerCase();
     const iOS = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(iOS);
 
-    // Detect if already installed (running in standalone mode)
     const standalone = window.navigator.standalone ||
                       window.matchMedia('(display-mode: standalone)').matches;
     setIsStandalone(standalone);
 
-    // Detect Safari browser
     const safari = /safari/.test(userAgent) && !/chrome|crios|fxios/.test(userAgent);
     setIsSafari(safari);
 
-    // Check if user has already dismissed the prompt
     const dismissed = localStorage.getItem('ios-pwa-prompt-dismissed');
     const dismissedTime = dismissed ? parseInt(dismissed, 10) : 0;
     const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
 
-    // Show prompt if:
-    // 1. Running on iOS
-    // 2. Not already in standalone mode
-    // 3. Using Safari
-    // 4. Either never dismissed OR dismissed more than 7 days ago
     if (iOS && !standalone && safari && (!dismissed || daysSinceDismissed > 7)) {
-      // Wait 3 seconds before showing prompt
       setTimeout(() => {
         setShowPrompt(true);
       }, 3000);
@@ -51,7 +41,7 @@ const IOSInstallPrompt = () => {
 
   const handleNeverShow = () => {
     setShowPrompt(false);
-    localStorage.setItem('ios-pwa-prompt-dismissed', '9999999999999'); // Far future date
+    localStorage.setItem('ios-pwa-prompt-dismissed', '9999999999999');
   };
 
   if (!showPrompt || !isIOS || isStandalone || !isSafari) {
@@ -60,152 +50,249 @@ const IOSInstallPrompt = () => {
 
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fadeIn" />
+      <div className="install-prompt-overlay" onClick={handleDismiss} />
 
-      {/* Prompt Card */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 animate-slideUp">
-        <div className="bg-white rounded-t-3xl shadow-2xl p-6 mx-4 mb-4 relative">
-          {/* Close Button */}
-          <button
-            onClick={handleDismiss}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+      <div className="install-prompt">
+        <button onClick={handleDismiss} className="install-prompt-close" aria-label="Close">
+          <X className="w-5 h-5" />
+        </button>
 
-          {/* Content */}
-          <div className="pr-10">
-            {/* Icon */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <Smartphone className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">Install CipherBank</h3>
-                <p className="text-sm text-gray-600">Add to your home screen</p>
-              </div>
+        <div className="install-prompt-content">
+          <div className="install-prompt-header">
+            <div className="install-prompt-icon">
+              <Smartphone className="w-7 h-7 text-white" />
             </div>
-
-            {/* Instructions */}
-            <div className="space-y-3 mb-6">
-              <p className="text-gray-700 font-medium">
-                Install this app for the best experience:
-              </p>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
-                {/* Step 1 */}
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                    1
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-gray-900 font-medium">
-                      Tap the <span className="inline-flex items-center gap-1">
-                        <Share className="w-4 h-4 inline text-blue-600" />
-                        <span className="font-bold text-blue-600">Share</span>
-                      </span> button below
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      (At the bottom or top of Safari)
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 2 */}
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                    2
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-gray-900 font-medium">
-                      Select "Add to Home Screen"
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Scroll down if you don't see it
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 3 */}
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                    3
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-gray-900 font-medium">
-                      Tap "Add" to confirm
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      CipherBank will appear on your home screen
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Benefits */}
-              <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl p-4">
-                <p className="text-sm font-semibold text-gray-900 mb-2">✨ Benefits:</p>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Full-screen experience</li>
-                  <li>• Faster access from home screen</li>
-                  <li>• Works offline</li>
-                  <li>• App-like navigation</li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleDismiss}
-                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
-              >
-                Maybe Later
-              </button>
-              <button
-                onClick={handleNeverShow}
-                className="px-4 py-3 text-gray-500 text-sm font-medium hover:text-gray-700 transition-colors"
-              >
-                Don't Show Again
-              </button>
+            <div>
+              <h3 className="install-prompt-title">Install CipherBank</h3>
+              <p className="install-prompt-subtitle">Add to your home screen</p>
             </div>
           </div>
 
-          {/* Animated Share Icon Pointer */}
-          <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-            <div className="bg-blue-600 text-white p-2 rounded-full shadow-lg">
-              <ChevronUp className="w-6 h-6" />
+          <div className="install-prompt-steps">
+            <p className="install-prompt-instruction">Install this app for the best experience:</p>
+
+            <div className="install-step">
+              <div className="step-number">1</div>
+              <div className="step-content">
+                <p className="step-title">
+                  Tap the <Share className="w-4 h-4 inline" /> <strong>Share</strong> button
+                </p>
+                <p className="step-hint">At the bottom of Safari</p>
+              </div>
+            </div>
+
+            <div className="install-step">
+              <div className="step-number">2</div>
+              <div className="step-content">
+                <p className="step-title">Select "Add to Home Screen"</p>
+                <p className="step-hint">Scroll down if you don't see it</p>
+              </div>
+            </div>
+
+            <div className="install-step">
+              <div className="step-number">3</div>
+              <div className="step-content">
+                <p className="step-title">Tap "Add" to confirm</p>
+                <p className="step-hint">CipherBank will appear on your home screen</p>
+              </div>
             </div>
           </div>
+
+          <div className="install-prompt-actions">
+            <button onClick={handleDismiss} className="lg-btn lg-btn-secondary">
+              Maybe Later
+            </button>
+            <button onClick={handleNeverShow} className="install-prompt-never">
+              Don't Show Again
+            </button>
+          </div>
+        </div>
+
+        <div className="install-prompt-arrow">
+          <ChevronUp className="w-6 h-6" />
         </div>
       </div>
 
-      {/* Animations */}
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-          from {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        .animate-fadeIn {
+        .install-prompt-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(4px);
+          z-index: 9998;
           animation: fadeIn 0.3s ease-out;
         }
 
-        .animate-slideUp {
+        .install-prompt {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 9999;
+          background: var(--bg-primary, #FFFFFF);
+          border-radius: 24px 24px 0 0;
+          padding: 24px;
+          padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+          box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
           animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+
+        .install-prompt-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background: var(--fill-secondary, rgba(120, 120, 128, 0.16));
+          border: none;
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: var(--label-secondary, #8E8E93);
+        }
+
+        .install-prompt-content {
+          padding-right: 32px;
+        }
+
+        .install-prompt-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+
+        .install-prompt-icon {
+          width: 56px;
+          height: 56px;
+          background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        }
+
+        .install-prompt-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: var(--label-primary, #000000);
+          margin: 0;
+        }
+
+        .install-prompt-subtitle {
+          font-size: 14px;
+          color: var(--label-secondary, #8E8E93);
+          margin: 4px 0 0 0;
+        }
+
+        .install-prompt-steps {
+          background: var(--fill-quaternary, rgba(116, 116, 128, 0.08));
+          border-radius: 16px;
+          padding: 16px;
+          margin-bottom: 20px;
+        }
+
+        .install-prompt-instruction {
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--label-primary, #000000);
+          margin: 0 0 16px 0;
+        }
+
+        .install-step {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .install-step:last-child {
+          margin-bottom: 0;
+        }
+
+        .step-number {
+          width: 24px;
+          height: 24px;
+          background: var(--system-blue, #007AFF);
+          color: #FFFFFF;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+
+        .step-content {
+          flex: 1;
+        }
+
+        .step-title {
+          font-size: 15px;
+          font-weight: 500;
+          color: var(--label-primary, #000000);
+          margin: 0;
+        }
+
+        .step-hint {
+          font-size: 13px;
+          color: var(--label-secondary, #8E8E93);
+          margin: 4px 0 0 0;
+        }
+
+        .install-prompt-actions {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+
+        .install-prompt-actions .lg-btn {
+          flex: 1;
+        }
+
+        .install-prompt-never {
+          background: transparent;
+          border: none;
+          color: var(--label-tertiary, #C7C7CC);
+          font-size: 14px;
+          cursor: pointer;
+          padding: 12px;
+        }
+
+        .install-prompt-arrow {
+          position: absolute;
+          bottom: -32px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: var(--system-blue, #007AFF);
+          color: #FFFFFF;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+          animation: bounce 1s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(-8px); }
+        }
+
+        @media (prefers-color-scheme: dark) {
+          .install-prompt {
+            background: var(--bg-primary, #1C1C1E);
+          }
         }
       `}</style>
     </>

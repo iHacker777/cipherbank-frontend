@@ -1,5 +1,13 @@
-@import './ios-styles.css';
+/* CipherBank - Main Stylesheet */
+/* iOS 26 Liquid Glass Design System */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import iOS 26 Liquid Glass Design System */
+@import './ios26-liquid-glass.css';
+
+/* Legacy iOS styles - can be removed once migration is complete */
+/* @import './ios-styles.css'; */
+/* @import './ios-modern-styles.css'; */
