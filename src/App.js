@@ -1602,7 +1602,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => { haptics.selection(); setNewUser({ ...newUser, selectedRole: 'user', roleIds: [2] })}
+                onClick={() => { haptics.selection(); setNewUser({ ...newUser, selectedRole: 'user', roleIds: [2] })}}
                 className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                   newUser.selectedRole === 'user'
                     ? 'border-blue-500 bg-blue-50 shadow-lg'
@@ -1624,7 +1624,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
 
               <button
                 type="button"
-                onClick={() => { haptics.selection(); setNewUser({ ...newUser, selectedRole: 'admin', roleIds: [1, 2] })}
+                onClick={() => { haptics.selection(); setNewUser({ ...newUser, selectedRole: 'admin', roleIds: [1, 2] })}}
                 className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                   newUser.selectedRole === 'admin'
                     ? 'border-purple-500 bg-purple-50 shadow-lg'
@@ -1682,7 +1682,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { haptics.light(); copyToClipboard(newUser.password)}
+                  onClick={() => { haptics.light(); copyToClipboard(newUser.password)}}
                   className="text-gray-400 hover:text-gray-600"
                   disabled={!newUser.password}
                 >
@@ -1690,7 +1690,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
                 </button>
                 <button
                   type="button"
-                  onClick={() => { haptics.light(); setShowPassword(!showPassword)}
+                  onClick={() => { haptics.light(); setShowPassword(!showPassword)}}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -1746,7 +1746,7 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
               />
               <button
                 type="button"
-                onClick={() => { haptics.light(); setShowConfirmPassword(!showConfirmPassword)}
+                onClick={() => { haptics.light(); setShowConfirmPassword(!showConfirmPassword)}}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -1975,7 +1975,7 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
               />
               <button
                 type="button"
-                onClick={() => { haptics.light(); setShowCurrentPassword(!showCurrentPassword)}
+                onClick={() => { haptics.light(); setShowCurrentPassword(!showCurrentPassword)}}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -2014,7 +2014,7 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { haptics.light(); copyToClipboard(passwordData.newPassword)}
+                  onClick={() => { haptics.light(); copyToClipboard(passwordData.newPassword)}}
                   className="text-gray-400 hover:text-gray-600"
                   disabled={!passwordData.newPassword}
                 >
@@ -2022,7 +2022,7 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
                 </button>
                 <button
                   type="button"
-                  onClick={() => { haptics.light(); setShowNewPassword(!showNewPassword)}
+                  onClick={() => { haptics.light(); setShowNewPassword(!showNewPassword)}}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -2078,7 +2078,7 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
               />
               <button
                 type="button"
-                onClick={() => { haptics.light(); setShowConfirmPassword(!showConfirmPassword)}
+                onClick={() => { haptics.light(); setShowConfirmPassword(!showConfirmPassword)}}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
