@@ -1,35 +1,36 @@
-// CipherBank Service Worker
-// Version: 1.0.0
+// CipherBank Enhanced Service Worker
+// Version: 2.0.0
+// iOS 18 PWA Optimized
 
-const CACHE_NAME = 'cipherbank-v1.0.0';
-const RUNTIME_CACHE = 'cipherbank-runtime-v1.0.0';
-const IMAGE_CACHE = 'cipherbank-images-v1.0.0';
+const CACHE_NAME = 'cipherbank-v2.0.0';
+const RUNTIME_CACHE = 'cipherbank-runtime-v2.0.0';
+const IMAGE_CACHE = 'cipherbank-images-v2.0.0';
+const API_CACHE = 'cipherbank-api-v2.0.0';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/static/css/main.css',
-  '/static/js/main.js',
+  '/offline.html',
   '/favicon.ico'
 ];
 
-// API endpoints to cache with network-first strategy
-const API_CACHE_PATTERNS = [
-  /\/api\/auth\/login/,
-  /\/api\/statements/
+// API patterns
+const API_PATTERNS = [
+  /\/api\/auth\//,
+  /\/api\/statements\//
 ];
 
-// Image patterns to cache
+// Image patterns
 const IMAGE_PATTERNS = [
   /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/
 ];
 
 // ==================== INSTALL EVENT ====================
 self.addEventListener('install', (event) => {
-  console.log('✅ Service Worker: Installing...');
-  
+  console.log('✅ Service Worker: Installing v2.0.0...');
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -49,17 +50,17 @@ self.addEventListener('install', (event) => {
 // ==================== ACTIVATE EVENT ====================
 self.addEventListener('activate', (event) => {
   console.log('✅ Service Worker: Activating...');
-  
+
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames
             .filter((cacheName) => {
-              // Delete old caches
-              return cacheName !== CACHE_NAME && 
-                     cacheName !== RUNTIME_CACHE && 
-                     cacheName !== IMAGE_CACHE;
+              return cacheName !== CACHE_NAME &&
+                     cacheName !== RUNTIME_CACHE &&
+                     cacheName !== IMAGE_CACHE &&
+                     cacheName !== API_CACHE;
             })
             .map((cacheName) => {
               console.log('🗑️ Service Worker: Deleting old cache', cacheName);
@@ -78,37 +79,35 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  
-  // Skip cross-origin requests
+
+  // Skip cross-origin requests except for our APIs
   if (url.origin !== location.origin) {
-    // Handle API requests
     if (url.hostname.includes('thepaytrix.com')) {
-      event.respondWith(networkFirstStrategy(request));
+      event.respondWith(networkFirstStrategy(request, API_CACHE));
     }
     return;
   }
-  
-  // Handle different resource types with appropriate strategies
+
+  // Only handle GET requests
   if (request.method !== 'GET') {
-    // Don't cache POST, PUT, DELETE requests
     event.respondWith(fetch(request));
     return;
   }
-  
+
   // Images - Cache First Strategy
   if (IMAGE_PATTERNS.some(pattern => pattern.test(url.pathname))) {
     event.respondWith(cacheFirstStrategy(request, IMAGE_CACHE));
     return;
   }
-  
+
   // App shell - Cache First Strategy
   if (PRECACHE_ASSETS.includes(url.pathname) || url.pathname === '/') {
     event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
     return;
   }
-  
+
   // Other requests - Network First Strategy
-  event.respondWith(networkFirstStrategy(request));
+  event.respondWith(networkFirstStrategy(request, RUNTIME_CACHE));
 });
 
 // ==================== CACHING STRATEGIES ====================
@@ -118,90 +117,89 @@ async function cacheFirstStrategy(request, cacheName = CACHE_NAME) {
   try {
     const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
-    
+
     if (cached) {
-      console.log('📦 Serving from cache:', request.url);
+      // Return cached version and update in background
+      updateCache(request, cacheName);
       return cached;
     }
-    
-    console.log('🌐 Fetching from network:', request.url);
+
     const response = await fetch(request);
-    
-    // Cache successful responses
+
     if (response && response.status === 200) {
       cache.put(request, response.clone());
     }
-    
+
     return response;
   } catch (error) {
     console.error('❌ Cache First Strategy failed:', error);
-    
-    // Return offline page if available
-    const cache = await caches.open(CACHE_NAME);
-    const offlinePage = await cache.match('/offline.html');
-    
-    if (offlinePage) {
-      return offlinePage;
-    }
-    
-    return new Response('Offline - Content not available', {
-      status: 503,
-      statusText: 'Service Unavailable',
-      headers: new Headers({
-        'Content-Type': 'text/plain'
-      })
-    });
+    return await getOfflineFallback(request);
   }
 }
 
 // Network First Strategy - Good for dynamic content
-async function networkFirstStrategy(request) {
+async function networkFirstStrategy(request, cacheName = RUNTIME_CACHE) {
   try {
-    console.log('🌐 Fetching from network:', request.url);
     const response = await fetch(request);
-    
-    // Cache successful responses
+
     if (response && response.status === 200) {
-      const cache = await caches.open(RUNTIME_CACHE);
+      const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
     }
-    
+
     return response;
   } catch (error) {
     console.log('📦 Network failed, trying cache:', request.url);
-    
-    // Try to serve from cache
-    const cache = await caches.open(RUNTIME_CACHE);
+
+    const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
-    
+
     if (cached) {
       return cached;
     }
-    
-    // Try main cache
-    const mainCache = await caches.open(CACHE_NAME);
-    const mainCached = await mainCache.match(request);
-    
-    if (mainCached) {
-      return mainCached;
-    }
-    
-    console.error('❌ Network First Strategy failed:', error);
-    
-    return new Response('Offline - Content not available', {
-      status: 503,
-      statusText: 'Service Unavailable',
-      headers: new Headers({
-        'Content-Type': 'text/plain'
-      })
-    });
+
+    return await getOfflineFallback(request);
   }
+}
+
+// Background cache update
+async function updateCache(request, cacheName) {
+  try {
+    const response = await fetch(request);
+    if (response && response.status === 200) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
+    }
+  } catch (error) {
+    // Silent fail for background updates
+  }
+}
+
+// Get offline fallback
+async function getOfflineFallback(request) {
+  const cache = await caches.open(CACHE_NAME);
+
+  // Try to return offline page for navigation requests
+  if (request.mode === 'navigate') {
+    const offlinePage = await cache.match('/offline.html');
+    if (offlinePage) {
+      return offlinePage;
+    }
+  }
+
+  return new Response('Offline - Content not available', {
+    status: 503,
+    statusText: 'Service Unavailable',
+    headers: new Headers({
+      'Content-Type': 'text/plain'
+    })
+  });
 }
 
 // ==================== BACKGROUND SYNC ====================
 self.addEventListener('sync', (event) => {
   console.log('🔄 Background Sync:', event.tag);
-  
+
   if (event.tag === 'sync-statements') {
     event.waitUntil(syncStatements());
   }
@@ -210,7 +208,7 @@ self.addEventListener('sync', (event) => {
 async function syncStatements() {
   try {
     console.log('🔄 Syncing statements...');
-    // Add your sync logic here
+    // Sync logic here
     console.log('✅ Statements synced');
   } catch (error) {
     console.error('❌ Sync failed:', error);
@@ -220,7 +218,7 @@ async function syncStatements() {
 // ==================== PUSH NOTIFICATIONS ====================
 self.addEventListener('push', (event) => {
   console.log('📬 Push notification received');
-  
+
   const data = event.data ? event.data.json() : {};
   const title = data.title || 'CipherBank';
   const options = {
@@ -229,18 +227,22 @@ self.addEventListener('push', (event) => {
     badge: '/icons/badge-72x72.png',
     vibrate: [200, 100, 200],
     data: data.url || '/',
+    tag: data.tag || 'cipherbank-notification',
+    requireInteraction: false,
     actions: [
       {
         action: 'open',
-        title: 'Open'
+        title: 'Open',
+        icon: '/icons/action-open.png'
       },
       {
         action: 'close',
-        title: 'Close'
+        title: 'Close',
+        icon: '/icons/action-close.png'
       }
     ]
   };
-  
+
   event.waitUntil(
     self.registration.showNotification(title, options)
   );
@@ -249,23 +251,21 @@ self.addEventListener('push', (event) => {
 // ==================== NOTIFICATION CLICK ====================
 self.addEventListener('notificationclick', (event) => {
   console.log('🔔 Notification clicked');
-  
+
   event.notification.close();
-  
+
   if (event.action === 'open') {
     const urlToOpen = event.notification.data || '/';
-    
+
     event.waitUntil(
       clients.matchAll({ type: 'window', includeUncontrolled: true })
         .then((clientList) => {
-          // Check if there's already a window open
           for (let client of clientList) {
             if (client.url === urlToOpen && 'focus' in client) {
               return client.focus();
             }
           }
-          
-          // Open new window
+
           if (clients.openWindow) {
             return clients.openWindow(urlToOpen);
           }
@@ -277,11 +277,11 @@ self.addEventListener('notificationclick', (event) => {
 // ==================== MESSAGE HANDLER ====================
 self.addEventListener('message', (event) => {
   console.log('📨 Message received:', event.data);
-  
+
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
+
   if (event.data && event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
       caches.keys().then((cacheNames) => {
@@ -293,6 +293,31 @@ self.addEventListener('message', (event) => {
       })
     );
   }
+
+  if (event.data && event.data.type === 'CACHE_URLS') {
+    event.waitUntil(
+      caches.open(RUNTIME_CACHE).then((cache) => {
+        return cache.addAll(event.data.urls);
+      })
+    );
+  }
 });
 
-console.log('🚀 Service Worker loaded');
+// ==================== PERIODIC BACKGROUND SYNC ====================
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'update-statements') {
+    event.waitUntil(updateStatementsInBackground());
+  }
+});
+
+async function updateStatementsInBackground() {
+  try {
+    console.log('🔄 Periodic background sync: updating statements...');
+    // Update logic here
+    console.log('✅ Background update complete');
+  } catch (error) {
+    console.error('❌ Background update failed:', error);
+  }
+}
+
+console.log('🚀 CipherBank Service Worker v2.0.0 loaded');

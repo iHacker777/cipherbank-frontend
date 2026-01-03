@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key, AlertTriangle, Clock, ArrowUpDown, Calendar } from 'lucide-react';
 import IOSInstallPrompt from './components/IOSInstallPrompt';
+import BottomTabBar from './components/BottomTabBar';
 import './ios-styles.css';
 import './ios-modern-styles.css';
 import haptics from './utils/ios-haptics';
+
 
 // ==================== CONFIGURATION ====================
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://cipher.thepaytrix.com/api';
@@ -144,39 +146,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ==================== BOTTOM TAB BAR COMPONENT (iOS) ====================
-const BottomTabBar = ({ currentView, setCurrentView, user }) => {
-  const isAdmin = user?.roles?.includes('ROLE_ADMIN') || false;
-
-  const handleTabClick = (viewId) => {
-    haptics.selection();
-    setCurrentView(viewId);
-  };
-
-  const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Activity },
-    { id: 'upload', label: 'Upload', icon: Upload },
-    { id: 'statements', label: 'Statements', icon: FileText },
-    ...(isAdmin ? [{ id: 'users', label: 'Users', icon: Users }] : []),
-  ];
-
-  return (
-    <div className="ios-tab-bar">
-      <div className="ios-tab-bar-content">
-        {tabs.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => handleTabClick(id)}
-            className={`ios-tab-item no-select ${currentView === id ? 'active' : ''}`}
-          >
-            <Icon />
-            <span>{label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
+// Removed - now using separate component from ./components/BottomTabBar
 // ==================== MAIN APP COMPONENT ====================
 const CipherBankUI = () => {
   const [currentView, setCurrentView] = useState('login');
@@ -731,7 +701,7 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, tokenExpiry
         toggleAutoRefresh={toggleAutoRefresh}
       />
 
-      <div className="flex-1 lg:ml-72">
+      <div className="flex-1 main-content-wrapper lg:ml-72">
         <Header user={user} setIsMenuOpen={setIsMenuOpen} tokenExpiry={tokenExpiry} />
         <main className="p-6 lg:p-8">
           {currentView === 'dashboard' && <Dashboard token={token} user={user} showNotification={showNotification} checkAndRefreshToken={checkAndRefreshToken} />}
@@ -765,8 +735,7 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
           onClick={() => setIsMenuOpen(false)}
         ></div>
       )}
-
-      <aside className={`fixed top-0 left-0 h-full w-72 bg-gradient-to-b from-slate-900 to-slate-800 text-white p-6 z-50 transition-transform duration-300 ${
+      <aside className={`desktop-sidebar fixed top-0 left-0 h-full w-72 bg-gradient-to-b from-slate-900 to-slate-800 text-white p-6 z-50 transition-transform duration-300 ${
         isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         <button

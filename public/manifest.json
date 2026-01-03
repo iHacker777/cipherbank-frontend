@@ -1,16 +1,24 @@
 {
   "name": "CipherBank - Automated Statement Parsing",
   "short_name": "CipherBank",
-  "description": "Enterprise-grade bank statement processing and financial data management platform",
+  "description": "Enterprise-grade bank statement processing and financial data management platform with automated parsing",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait-primary",
-  "theme_color": "#2563eb",
-  "background_color": "#ffffff",
-  "categories": ["finance", "business", "productivity"],
+  "theme_color": "#007AFF",
+  "background_color": "#FFFFFF",
+  "categories": ["finance", "business", "productivity", "utilities"],
   "lang": "en-US",
   "dir": "ltr",
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -67,14 +75,28 @@
       "sizes": "1920x1080",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "CipherBank Dashboard"
+      "label": "CipherBank Dashboard - Desktop View"
     },
     {
       "src": "/screenshots/mobile-dashboard.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "CipherBank Mobile Dashboard"
+      "label": "CipherBank Dashboard - Mobile View"
+    },
+    {
+      "src": "/screenshots/upload-screen.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Upload Statement Screen"
+    },
+    {
+      "src": "/screenshots/statements-list.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Statements History"
     }
   ],
   "shortcuts": [
@@ -85,7 +107,7 @@
       "url": "/?action=upload",
       "icons": [
         {
-          "src": "/icons/upload-shortcut.png",
+          "src": "/icons/shortcut-upload.png",
           "sizes": "96x96",
           "type": "image/png"
         }
@@ -98,13 +120,68 @@
       "url": "/?action=statements",
       "icons": [
         {
-          "src": "/icons/statements-shortcut.png",
+          "src": "/icons/shortcut-statements.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your dashboard",
+      "url": "/?action=dashboard",
+      "icons": [
+        {
+          "src": "/icons/shortcut-dashboard.png",
           "sizes": "96x96",
           "type": "image/png"
         }
       ]
     }
   ],
-  "prefer_related_applications": false,
-  "related_applications": []
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "statement",
+          "accept": [
+            "text/csv",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/pdf"
+          ]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/upload",
+      "accept": {
+        "text/csv": [".csv"],
+        "application/vnd.ms-excel": [".xls"],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+        "application/pdf": [".pdf"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+cipherbank",
+      "url": "/?action=%s"
+    }
+  ],
+  "related_applications": [],
+  "serviceworker": {
+    "src": "/service-worker.js",
+    "scope": "/",
+    "update_via_cache": "none"
+  }
 }

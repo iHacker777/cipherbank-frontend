@@ -5,9 +5,10 @@
 
     <!-- ==================== BASIC META TAGS ==================== -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
-    <meta name="description" content="CipherBank - Enterprise-grade automated bank statement parsing and financial data management platform" />
-    <meta name="keywords" content="bank statement, parsing, financial, automated, CipherBank, statement processing" />
+    <meta name="description" content="CipherBank - Enterprise-grade automated bank statement parsing and financial data management platform with secure processing" />
+    <meta name="keywords" content="bank statement, parsing, financial, automated, CipherBank, statement processing, fintech, banking" />
     <meta name="author" content="The PayTrix" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
     <!-- ==================== PWA MANIFEST ==================== -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
@@ -21,49 +22,45 @@
     <!-- Web App Capable - Makes app run in standalone mode -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
 
-    <!-- Status Bar Style - Controls the appearance of the status bar -->
-    <!-- Options: default, black, black-translucent -->
+    <!-- Status Bar Style - iOS 18 optimized -->
+    <!-- black-translucent provides best experience with Dynamic Island -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-    <!-- App Title - The name shown on iOS home screen -->
+    <!-- App Title - Name shown on iOS home screen -->
     <meta name="apple-mobile-web-app-title" content="CipherBank" />
 
-    <!-- Format Detection - Prevents iOS from auto-detecting and styling phone numbers, etc. -->
+    <!-- Format Detection - Prevents iOS auto-detection -->
     <meta name="format-detection" content="telephone=no" />
     <meta name="format-detection" content="date=no" />
     <meta name="format-detection" content="address=no" />
     <meta name="format-detection" content="email=no" />
 
     <!-- ==================== iOS TOUCH ICONS ==================== -->
-    <!-- Standard iOS Touch Icon -->
+    <!-- Primary Touch Icon -->
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/icons/apple-touch-icon.png" />
 
-    <!-- iOS Touch Icons for different devices -->
+    <!-- Touch Icons for Different iOS Devices -->
     <link rel="apple-touch-icon" sizes="120x120" href="%PUBLIC_URL%/icons/apple-touch-icon-120x120.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/icons/apple-touch-icon-152x152.png" />
     <link rel="apple-touch-icon" sizes="167x167" href="%PUBLIC_URL%/icons/apple-touch-icon-167x167.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/icons/apple-touch-icon-180x180.png" />
 
-    <!-- ==================== iOS SPLASH SCREENS ==================== -->
-    <!-- iPhone 17 Pro Max / 16 Pro Max / 15 Pro Max (430x932) -->
-    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-17-pro-max-portrait.png" />
-    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-17-pro-max-landscape.png" />
+    <!-- ==================== iOS 18 SPLASH SCREENS ==================== -->
+    <!-- iPhone 15 Pro Max / 16 Pro Max (430x932) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-15-pro-max-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-15-pro-max-landscape.png" />
 
-    <!-- iPhone 17 Pro / 16 Pro / 15 Pro (393x852) -->
-    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-17-pro-portrait.png" />
-    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-17-pro-landscape.png" />
+    <!-- iPhone 15 Pro / 16 Pro (393x852) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-15-pro-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-15-pro-landscape.png" />
 
-    <!-- iPhone 17 / 16 / 15 (390x844) -->
-    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-17-portrait.png" />
-    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-17-landscape.png" />
+    <!-- iPhone 15 / 16 (390x844) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-15-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-15-landscape.png" />
 
-    <!-- iPhone 14 Pro Max / 13 Pro Max / 12 Pro Max (428x926) -->
+    <!-- iPhone 14 Pro Max / 13 Pro Max (428x926) -->
     <link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-14-pro-max-portrait.png" />
     <link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-14-pro-max-landscape.png" />
-
-    <!-- iPhone 14 Pro / 13 Pro / 12 Pro (390x844) -->
-    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-14-pro-portrait.png" />
-    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-14-pro-landscape.png" />
 
     <!-- iPhone SE (375x667) -->
     <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-se-portrait.png" />
@@ -77,21 +74,21 @@
     <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%PUBLIC_URL%/splash/ipad-pro-11-portrait.png" />
     <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="%PUBLIC_URL%/splash/ipad-pro-11-landscape.png" />
 
-    <!-- ==================== THEME COLOR ==================== -->
-    <!-- Standard theme color -->
-    <meta name="theme-color" content="#2563eb" />
+    <!-- ==================== THEME COLOR (iOS 18 Dynamic) ==================== -->
+    <!-- Standard theme color for all browsers -->
+    <meta name="theme-color" content="#007AFF" />
 
-    <!-- iOS Safari theme color (iOS 15+) -->
-    <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1e40af" media="(prefers-color-scheme: dark)" />
+    <!-- iOS 18 Dark Mode Support -->
+    <meta name="theme-color" content="#007AFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0A84FF" media="(prefers-color-scheme: dark)" />
 
     <!-- ==================== MICROSOFT TILES ==================== -->
-    <meta name="msapplication-TileColor" content="#2563eb" />
+    <meta name="msapplication-TileColor" content="#007AFF" />
     <meta name="msapplication-TileImage" content="%PUBLIC_URL%/icons/ms-icon-144x144.png" />
     <meta name="msapplication-config" content="%PUBLIC_URL%/browserconfig.xml" />
 
-    <!-- ==================== PERFORMANCE & PRELOADING ==================== -->
-    <!-- DNS Prefetch for API domains -->
+    <!-- ==================== PERFORMANCE OPTIMIZATIONS ==================== -->
+    <!-- DNS Prefetch -->
     <link rel="dns-prefetch" href="//cipher.thepaytrix.com" />
     <link rel="dns-prefetch" href="//testing.thepaytrix.com" />
 
@@ -99,11 +96,30 @@
     <link rel="preconnect" href="https://cipher.thepaytrix.com" crossorigin />
     <link rel="preconnect" href="https://testing.thepaytrix.com" crossorigin />
 
+    <!-- Preload critical resources -->
+    <link rel="preload" as="style" href="%PUBLIC_URL%/static/css/main.css" />
+    <link rel="preload" as="script" href="%PUBLIC_URL%/static/js/main.js" />
+
     <!-- ==================== SECURITY ==================== -->
     <!-- Content Security Policy -->
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: https:;
+        font-src 'self' data:;
+        connect-src 'self' https://cipher.thepaytrix.com https://testing.thepaytrix.com;
+        frame-src 'none';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+        upgrade-insecure-requests;
+    " />
 
-    <!-- ==================== OPEN GRAPH / SOCIAL MEDIA ==================== -->
+    <!-- Referrer Policy -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- ==================== SOCIAL MEDIA / OPEN GRAPH ==================== -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="CipherBank - Automated Statement Parsing" />
     <meta property="og:description" content="Enterprise-grade bank statement processing and financial data management platform" />
@@ -117,44 +133,51 @@
     <meta name="twitter:description" content="Enterprise-grade bank statement processing and financial data management platform" />
     <meta name="twitter:image" content="%PUBLIC_URL%/icons/twitter-image.png" />
 
+    <!-- ==================== ACCESSIBILITY ==================== -->
+    <meta name="color-scheme" content="light dark" />
+
     <title>CipherBank - Automated Statement Parsing</title>
 
-    <!-- ==================== iOS SPECIFIC STYLES ==================== -->
+    <!-- ==================== iOS 18 OPTIMIZED STYLES ==================== -->
     <style>
-        /* Prevent text size adjustment on iOS */
+        /* Critical CSS for iOS 18 */
+
+        /* Prevent text size adjustment */
         html {
           -webkit-text-size-adjust: 100%;
           text-size-adjust: 100%;
         }
 
-        /* Prevent tap highlight on iOS */
+        /* Prevent tap highlight */
         * {
           -webkit-tap-highlight-color: transparent;
         }
 
-        /* Safe area insets for notched devices */
+        /* Safe area insets */
         body {
           padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+          margin: 0;
+          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
         }
 
-        /* Smooth scrolling on iOS */
+        /* Smooth scrolling */
         * {
           -webkit-overflow-scrolling: touch;
         }
 
-        /* Prevent pull-to-refresh on iOS */
+        /* Prevent pull-to-refresh */
         body {
           overscroll-behavior-y: contain;
         }
 
-        /* Loading screen */
+        /* Loading screen - iOS 18 styled */
         #loading-screen {
           position: fixed;
           top: 0;
           left: 0;
           width: 100%;
           height: 100%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -173,22 +196,25 @@
         }
 
         .loading-logo {
-          width: 80px;
-          height: 80px;
-          margin: 0 auto 20px;
-          background: white;
-          border-radius: 20px;
+          width: 88px;
+          height: 88px;
+          margin: 0 auto 24px;
+          background: rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 24px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid rgba(102, 126, 234, 0.3);
-          border-top-color: #667eea;
+          width: 44px;
+          height: 44px;
+          border: 4px solid rgba(255, 255, 255, 0.3);
+          border-top-color: white;
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
@@ -198,9 +224,25 @@
         }
 
         .loading-text {
-          font-size: 18px;
+          font-size: 17px;
           font-weight: 600;
-          margin-top: 10px;
+          margin-top: 12px;
+          letter-spacing: -0.4px;
+        }
+
+        .loading-subtext {
+          font-size: 13px;
+          font-weight: 400;
+          margin-top: 8px;
+          opacity: 0.8;
+          letter-spacing: -0.08px;
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+          #loading-screen {
+            background: linear-gradient(135deg, #0A84FF 0%, #5E5CE6 100%);
+          }
         }
     </style>
 </head>
@@ -211,19 +253,44 @@
         <div class="loading-logo">
             <div class="loading-spinner"></div>
         </div>
-        <div class="loading-text">Loading CipherBank...</div>
+        <div class="loading-text">Loading CipherBank</div>
+        <div class="loading-subtext">Secure Statement Processing</div>
     </div>
 </div>
 
 <!-- ==================== NO JAVASCRIPT FALLBACK ==================== -->
 <noscript>
-    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; text-align: center; background: #f9fafb;">
-        <div style="max-width: 400px; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
-            <h1 style="color: #1f2937; margin-bottom: 16px;">JavaScript Required</h1>
-            <p style="color: #6b7280; margin-bottom: 24px;">
-                CipherBank requires JavaScript to run. Please enable JavaScript in your browser settings and reload the page.
+    <div style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+        ">
+        <div style="
+                max-width: 400px;
+                background: white;
+                padding: 40px;
+                border-radius: 24px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            ">
+            <h1 style="color: #1f2937; margin-bottom: 16px; font-size: 24px; font-weight: 700;">JavaScript Required</h1>
+            <p style="color: #6b7280; margin-bottom: 24px; line-height: 1.6;">
+                CipherBank requires JavaScript to function properly. Please enable JavaScript in your browser settings and reload the page.
             </p>
-            <button onclick="window.location.reload()" style="background: #2563eb; color: white; padding: 12px 24px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+            <button onclick="window.location.reload()" style="
+                    background: #007AFF;
+                    color: white;
+                    padding: 12px 24px;
+                    border: none;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    font-size: 15px;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+                ">
                 Reload Page
             </button>
         </div>
@@ -233,7 +300,7 @@
 <!-- ==================== ROOT DIV ==================== -->
 <div id="root"></div>
 
-<!-- ==================== SERVICE WORKER REGISTRATION ==================== -->
+<!-- ==================== SERVICE WORKER & PWA SETUP ==================== -->
 <script>
     // Hide loading screen when React app loads
     window.addEventListener('load', () => {
@@ -245,29 +312,37 @@
             loadingScreen.remove();
           }, 500);
         }
-      }, 500);
+      }, 300);
     });
 
-    // Service Worker Registration
+    // Enhanced Service Worker Registration
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
-          .register('/service-worker.js')
+          .register('/service-worker.js', {
+            scope: '/',
+            updateViaCache: 'none'
+          })
           .then(registration => {
             console.log('✅ Service Worker registered:', registration.scope);
 
-            // Check for updates periodically
+            // Check for updates every 60 seconds
             setInterval(() => {
               registration.update();
-            }, 60000); // Check every minute
+            }, 60000);
 
-            // Listen for updates
+            // Listen for new service worker
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
+
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   // New service worker available
-                  if (confirm('A new version of CipherBank is available. Reload to update?')) {
+                  console.log('🔄 New version available');
+
+                  // Show update notification
+                  if (confirm('A new version of CipherBank is available. Update now?')) {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
                     window.location.reload();
                   }
                 }
@@ -277,35 +352,81 @@
           .catch(error => {
             console.warn('⚠️ Service Worker registration failed:', error);
           });
+
+        // Handle controller change
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('🔄 Service Worker controller changed');
+          window.location.reload();
+        });
       });
     }
 
-    // iOS Standalone Mode Detection
+    // iOS Detection and Setup
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+    const isStandalone = window.navigator.standalone ||
+                        window.matchMedia('(display-mode: standalone)').matches;
 
-    if (isIOS && isStandalone) {
-      console.log('📱 Running in iOS standalone mode');
-      document.documentElement.classList.add('ios-standalone');
+    if (isIOS) {
+      document.documentElement.classList.add('ios-device');
+      console.log('📱 iOS device detected');
+
+      if (isStandalone) {
+        document.documentElement.classList.add('ios-standalone');
+        console.log('📱 Running in iOS standalone mode');
+      }
+
+      // Dynamic viewport height for iOS
+      const setVH = () => {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      };
+
+      setVH();
+      window.addEventListener('resize', setVH);
+      window.addEventListener('orientationchange', setVH);
     }
 
-    // Prevent zoom on iOS
+    // Prevent iOS zoom on double-tap
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (event) => {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, false);
+
+    // Prevent iOS zoom gesture
     document.addEventListener('gesturestart', (e) => {
       e.preventDefault();
     });
 
-    // Handle viewport changes on iOS (keyboard appearance)
-    if (isIOS) {
-      window.addEventListener('resize', () => {
-        // Update viewport height on resize (keyboard show/hide)
-        const vh = window.innerHeight * 0.01;
+    // Handle viewport changes (keyboard)
+    if (isIOS && window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        const vh = window.visualViewport.height * 0.01;
         document.documentElement.style.setProperty('--vh', `${vh}px`);
       });
-
-      // Set initial viewport height
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
     }
+
+    // Performance monitoring
+    if ('PerformanceObserver' in window) {
+      try {
+        const observer = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            console.log(`${entry.name}: ${entry.duration}ms`);
+          }
+        });
+        observer.observe({ entryTypes: ['measure', 'navigation'] });
+      } catch (e) {
+        // PerformanceObserver not supported
+      }
+    }
+
+    // Log app info
+    console.log('%cCipherBank PWA', 'color: #007AFF; font-size: 24px; font-weight: bold');
+    console.log('%cVersion: 2.0.0', 'color: #5856D6; font-size: 14px');
+    console.log('%ciOS 18 Optimized', 'color: #34C759; font-size: 12px');
 </script>
 </body>
 </html>
