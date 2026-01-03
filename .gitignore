@@ -7,7 +7,7 @@
 
 # testing
 /coverage
-
+/IOS-Integration
 # production
 /build
 

@@ -1,43 +1,311 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
+
+    <!-- ==================== BASIC META TAGS ==================== -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+    <meta name="description" content="CipherBank - Enterprise-grade automated bank statement parsing and financial data management platform" />
+    <meta name="keywords" content="bank statement, parsing, financial, automated, CipherBank, statement processing" />
+    <meta name="author" content="The PayTrix" />
+
+    <!-- ==================== PWA MANIFEST ==================== -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>CipherBank</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app .</noscript>
-    <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+    <!-- ==================== FAVICON ==================== -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+    <!-- ==================== iOS SPECIFIC META TAGS ==================== -->
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-  </body>
+    <!-- Web App Capable - Makes app run in standalone mode -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+
+    <!-- Status Bar Style - Controls the appearance of the status bar -->
+    <!-- Options: default, black, black-translucent -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- App Title - The name shown on iOS home screen -->
+    <meta name="apple-mobile-web-app-title" content="CipherBank" />
+
+    <!-- Format Detection - Prevents iOS from auto-detecting and styling phone numbers, etc. -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="format-detection" content="date=no" />
+    <meta name="format-detection" content="address=no" />
+    <meta name="format-detection" content="email=no" />
+
+    <!-- ==================== iOS TOUCH ICONS ==================== -->
+    <!-- Standard iOS Touch Icon -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icons/apple-touch-icon.png" />
+
+    <!-- iOS Touch Icons for different devices -->
+    <link rel="apple-touch-icon" sizes="120x120" href="%PUBLIC_URL%/icons/apple-touch-icon-120x120.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/icons/apple-touch-icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="%PUBLIC_URL%/icons/apple-touch-icon-167x167.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/icons/apple-touch-icon-180x180.png" />
+
+    <!-- ==================== iOS SPLASH SCREENS ==================== -->
+    <!-- iPhone 17 Pro Max / 16 Pro Max / 15 Pro Max (430x932) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-17-pro-max-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-17-pro-max-landscape.png" />
+
+    <!-- iPhone 17 Pro / 16 Pro / 15 Pro (393x852) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-17-pro-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-17-pro-landscape.png" />
+
+    <!-- iPhone 17 / 16 / 15 (390x844) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-17-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-17-landscape.png" />
+
+    <!-- iPhone 14 Pro Max / 13 Pro Max / 12 Pro Max (428x926) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-14-pro-max-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-14-pro-max-landscape.png" />
+
+    <!-- iPhone 14 Pro / 13 Pro / 12 Pro (390x844) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-14-pro-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-14-pro-landscape.png" />
+
+    <!-- iPhone SE (375x667) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%PUBLIC_URL%/splash/iphone-se-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="%PUBLIC_URL%/splash/iphone-se-landscape.png" />
+
+    <!-- iPad Pro 12.9" (1024x1366) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%PUBLIC_URL%/splash/ipad-pro-12-9-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="%PUBLIC_URL%/splash/ipad-pro-12-9-landscape.png" />
+
+    <!-- iPad Pro 11" (834x1194) -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="%PUBLIC_URL%/splash/ipad-pro-11-portrait.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="%PUBLIC_URL%/splash/ipad-pro-11-landscape.png" />
+
+    <!-- ==================== THEME COLOR ==================== -->
+    <!-- Standard theme color -->
+    <meta name="theme-color" content="#2563eb" />
+
+    <!-- iOS Safari theme color (iOS 15+) -->
+    <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1e40af" media="(prefers-color-scheme: dark)" />
+
+    <!-- ==================== MICROSOFT TILES ==================== -->
+    <meta name="msapplication-TileColor" content="#2563eb" />
+    <meta name="msapplication-TileImage" content="%PUBLIC_URL%/icons/ms-icon-144x144.png" />
+    <meta name="msapplication-config" content="%PUBLIC_URL%/browserconfig.xml" />
+
+    <!-- ==================== PERFORMANCE & PRELOADING ==================== -->
+    <!-- DNS Prefetch for API domains -->
+    <link rel="dns-prefetch" href="//cipher.thepaytrix.com" />
+    <link rel="dns-prefetch" href="//testing.thepaytrix.com" />
+
+    <!-- Preconnect to API domains -->
+    <link rel="preconnect" href="https://cipher.thepaytrix.com" crossorigin />
+    <link rel="preconnect" href="https://testing.thepaytrix.com" crossorigin />
+
+    <!-- ==================== SECURITY ==================== -->
+    <!-- Content Security Policy -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- ==================== OPEN GRAPH / SOCIAL MEDIA ==================== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CipherBank - Automated Statement Parsing" />
+    <meta property="og:description" content="Enterprise-grade bank statement processing and financial data management platform" />
+    <meta property="og:image" content="%PUBLIC_URL%/icons/og-image.png" />
+    <meta property="og:url" content="https://cipher.thepaytrix.com" />
+    <meta property="og:site_name" content="CipherBank" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="CipherBank - Automated Statement Parsing" />
+    <meta name="twitter:description" content="Enterprise-grade bank statement processing and financial data management platform" />
+    <meta name="twitter:image" content="%PUBLIC_URL%/icons/twitter-image.png" />
+
+    <title>CipherBank - Automated Statement Parsing</title>
+
+    <!-- ==================== iOS SPECIFIC STYLES ==================== -->
+    <style>
+        /* Prevent text size adjustment on iOS */
+        html {
+          -webkit-text-size-adjust: 100%;
+          text-size-adjust: 100%;
+        }
+
+        /* Prevent tap highlight on iOS */
+        * {
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Safe area insets for notched devices */
+        body {
+          padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        /* Smooth scrolling on iOS */
+        * {
+          -webkit-overflow-scrolling: touch;
+        }
+
+        /* Prevent pull-to-refresh on iOS */
+        body {
+          overscroll-behavior-y: contain;
+        }
+
+        /* Loading screen */
+        #loading-screen {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          transition: opacity 0.5s ease-out;
+        }
+
+        #loading-screen.hidden {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .loading-content {
+          text-align: center;
+          color: white;
+        }
+
+        .loading-logo {
+          width: 80px;
+          height: 80px;
+          margin: 0 auto 20px;
+          background: white;
+          border-radius: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid rgba(102, 126, 234, 0.3);
+          border-top-color: #667eea;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+          font-size: 18px;
+          font-weight: 600;
+          margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<!-- ==================== LOADING SCREEN ==================== -->
+<div id="loading-screen">
+    <div class="loading-content">
+        <div class="loading-logo">
+            <div class="loading-spinner"></div>
+        </div>
+        <div class="loading-text">Loading CipherBank...</div>
+    </div>
+</div>
+
+<!-- ==================== NO JAVASCRIPT FALLBACK ==================== -->
+<noscript>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; text-align: center; background: #f9fafb;">
+        <div style="max-width: 400px; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
+            <h1 style="color: #1f2937; margin-bottom: 16px;">JavaScript Required</h1>
+            <p style="color: #6b7280; margin-bottom: 24px;">
+                CipherBank requires JavaScript to run. Please enable JavaScript in your browser settings and reload the page.
+            </p>
+            <button onclick="window.location.reload()" style="background: #2563eb; color: white; padding: 12px 24px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                Reload Page
+            </button>
+        </div>
+    </div>
+</noscript>
+
+<!-- ==================== ROOT DIV ==================== -->
+<div id="root"></div>
+
+<!-- ==================== SERVICE WORKER REGISTRATION ==================== -->
+<script>
+    // Hide loading screen when React app loads
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          loadingScreen.classList.add('hidden');
+          setTimeout(() => {
+            loadingScreen.remove();
+          }, 500);
+        }
+      }, 500);
+    });
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('/service-worker.js')
+          .then(registration => {
+            console.log('✅ Service Worker registered:', registration.scope);
+
+            // Check for updates periodically
+            setInterval(() => {
+              registration.update();
+            }, 60000); // Check every minute
+
+            // Listen for updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker available
+                  if (confirm('A new version of CipherBank is available. Reload to update?')) {
+                    window.location.reload();
+                  }
+                }
+              });
+            });
+          })
+          .catch(error => {
+            console.warn('⚠️ Service Worker registration failed:', error);
+          });
+      });
+    }
+
+    // iOS Standalone Mode Detection
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+    if (isIOS && isStandalone) {
+      console.log('📱 Running in iOS standalone mode');
+      document.documentElement.classList.add('ios-standalone');
+    }
+
+    // Prevent zoom on iOS
+    document.addEventListener('gesturestart', (e) => {
+      e.preventDefault();
+    });
+
+    // Handle viewport changes on iOS (keyboard appearance)
+    if (isIOS) {
+      window.addEventListener('resize', () => {
+        // Update viewport height on resize (keyboard show/hide)
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      });
+
+      // Set initial viewport height
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+</script>
+</body>
 </html>

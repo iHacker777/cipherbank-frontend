@@ -1,0 +1,378 @@
+/* ==================== iOS OPTIMIZATIONS ==================== */
+
+/* CSS Variables for iOS */
+:root {
+  /* Safe area insets for notched devices */
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-right: env(safe-area-inset-right);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  
+  /* Dynamic viewport height (for iOS keyboard handling) */
+  --vh: 1vh;
+  
+  /* Touch target sizes (44x44 minimum for iOS) */
+  --touch-target-min: 44px;
+  
+  /* iOS specific colors */
+  --ios-blue: #007AFF;
+  --ios-gray: #8E8E93;
+  --ios-separator: rgba(60, 60, 67, 0.29);
+}
+
+/* ==================== GLOBAL iOS FIXES ==================== */
+
+/* Prevent text size adjustment on orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Remove tap highlight */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth scrolling on iOS */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent pull-to-refresh */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Use dynamic viewport height */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: calc(var(--vh, 1vh) * 100);
+}
+
+/* ==================== SAFE AREA SUPPORT ==================== */
+
+/* Apply safe area padding to body */
+body {
+  padding-top: var(--safe-area-inset-top);
+  padding-right: var(--safe-area-inset-right);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+}
+
+/* iOS standalone mode adjustments */
+.ios-standalone body {
+  padding-top: max(var(--safe-area-inset-top), 20px);
+}
+
+/* Fixed header with safe area */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding-top: var(--safe-area-inset-top);
+  z-index: 50;
+}
+
+/* Fixed footer with safe area */
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding-bottom: var(--safe-area-inset-bottom);
+  z-index: 50;
+}
+
+/* Sidebar with safe area */
+.sidebar {
+  padding-top: var(--safe-area-inset-top);
+  padding-left: var(--safe-area-inset-left);
+}
+
+/* Bottom notification with safe area */
+.bottom-notification {
+  bottom: var(--safe-area-inset-bottom);
+  margin-bottom: 1rem;
+}
+
+/* ==================== TOUCH OPTIMIZATIONS ==================== */
+
+/* Minimum touch target size for iOS */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+.touchable {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+}
+
+/* Active state feedback */
+button:active,
+a:active,
+.touchable:active {
+  opacity: 0.7;
+  transform: scale(0.98);
+  transition: all 0.1s ease;
+}
+
+/* Remove iOS button styling */
+button,
+input[type="button"],
+input[type="submit"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ==================== INPUT OPTIMIZATIONS ==================== */
+
+/* Remove iOS input shadows and borders */
+input,
+textarea,
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0;
+}
+
+/* Custom input styling for iOS */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="tel"],
+textarea {
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: 16px; /* Prevents zoom on focus in iOS */
+  border-radius: 12px;
+}
+
+/* Prevent zoom on input focus */
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Remove inner shadow from inputs on iOS */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="tel"],
+textarea {
+  -webkit-appearance: none;
+  -webkit-box-shadow: none;
+  box-shadow: none;
+}
+
+/* ==================== SCROLLING OPTIMIZATIONS ==================== */
+
+/* Momentum scrolling */
+.scrollable {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar on iOS but keep functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==================== ANIMATION OPTIMIZATIONS ==================== */
+
+/* Use GPU acceleration for better performance */
+.animate-fade,
+.animate-slide,
+.transform-gpu {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==================== STANDALONE MODE ==================== */
+
+/* Hide elements when in standalone mode */
+.ios-standalone .hide-in-standalone {
+  display: none !important;
+}
+
+/* Show elements only in standalone mode */
+.show-in-standalone {
+  display: none;
+}
+
+.ios-standalone .show-in-standalone {
+  display: block;
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ios-separator: rgba(84, 84, 88, 0.65);
+  }
+}
+
+/* ==================== NOTCH/DYNAMIC ISLAND SUPPORT ==================== */
+
+/* iPhone with notch/Dynamic Island */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .header-with-notch {
+    padding-top: calc(var(--safe-area-inset-top) + 1rem);
+  }
+}
+
+/* ==================== HAPTIC FEEDBACK ==================== */
+
+/* Visual feedback for haptic-enabled actions */
+.haptic-feedback:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* ==================== LOADING STATES ==================== */
+
+/* iOS-style loading spinner */
+.ios-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 122, 255, 0.2);
+  border-top-color: #007AFF;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==================== SWIPE GESTURES ==================== */
+
+/* Prevent overscroll/bounce on specific elements */
+.no-overscroll {
+  overscroll-behavior: contain;
+}
+
+/* Enable swipe gestures */
+.swipeable {
+  touch-action: pan-x pan-y;
+}
+
+/* ==================== STATUS BAR THEMING ==================== */
+
+/* Adjust content for status bar */
+.status-bar-spacer {
+  height: var(--safe-area-inset-top);
+  min-height: 20px;
+}
+
+/* ==================== CONTEXT MENU PREVENTION ==================== */
+
+/* Prevent long-press context menu on iOS for specific elements */
+.no-context-menu {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ==================== FILE UPLOAD OPTIMIZATIONS ==================== */
+
+/* Better file upload button for iOS */
+input[type="file"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="file"]::file-selector-button {
+  -webkit-appearance: button;
+  appearance: button;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: #007AFF;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ==================== RESPONSIVE TYPOGRAPHY ==================== */
+
+/* Scale text appropriately on iOS */
+@media screen and (max-width: 430px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media screen and (min-width: 431px) and (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media screen and (min-width: 769px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+/* ==================== SELECTION STYLING ==================== */
+
+/* Custom selection color for iOS */
+::selection {
+  background: rgba(0, 122, 255, 0.3);
+  color: inherit;
+}
+
+::-moz-selection {
+  background: rgba(0, 122, 255, 0.3);
+  color: inherit;
+}
+
+/* ==================== FOCUS STATES ==================== */
+
+/* Better focus states for iOS */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+
+/* ==================== PRINT STYLES ==================== */
+
+@media print {
+  /* Hide non-essential elements when printing */
+  .sidebar,
+  .notification,
+  button,
+  .no-print {
+    display: none !important;
+  }
+}
