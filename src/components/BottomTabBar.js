@@ -5,6 +5,8 @@ import haptics from '../utils/ios-haptics';
 /**
  * iOS 26 Floating Tab Bar Component
  * Only visible on mobile devices (< 1024px)
+ *
+ * FIXED: Updated class names to match CSS (tab-bar__container, tab-bar__item)
  */
 const BottomTabBar = ({ currentView, setCurrentView, user }) => {
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') || false;
@@ -28,22 +30,25 @@ const BottomTabBar = ({ currentView, setCurrentView, user }) => {
   const displayTabs = tabs.slice(0, 5);
 
   return (
-    <div className="tab-bar">
-      <div className="tab-bar-container">
-        {displayTabs.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => handleTabClick(id)}
-            className={`tab-item ${currentView === id ? 'active' : ''}`}
-            aria-label={label}
-            aria-current={currentView === id ? 'page' : undefined}
-          >
-            <Icon className="tab-icon" />
-            <span className="tab-label">{label}</span>
-          </button>
-        ))}
+    <nav className="tab-bar" role="navigation" aria-label="Main navigation">
+      <div className="tab-bar__container">
+        <div className="tab-bar__content">
+          {displayTabs.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => handleTabClick(id)}
+              className={`tab-bar__item ${currentView === id ? 'tab-bar__item--active' : ''}`}
+              aria-label={label}
+              aria-current={currentView === id ? 'page' : undefined}
+              type="button"
+            >
+              <Icon className="tab-bar__icon" />
+              <span className="tab-bar__label">{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
+    </nav>
   );
 };
 

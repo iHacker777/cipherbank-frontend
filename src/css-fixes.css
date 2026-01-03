@@ -1,0 +1,498 @@
+/* ==================== CSS FIXES FOR CIPHERBANK ==================== */
+/* Add these rules to ios26-liquid-glass.css or create a separate fixes.css */
+
+/* ==================== BOTTOM TAB BAR FIX ==================== */
+/* Fix: Ensure tab bar displays horizontally with proper flex layout */
+
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  padding-bottom: calc(var(--space-2, 8px) + env(safe-area-inset-bottom, 0px));
+  display: none; /* Hidden by default, shown on mobile */
+  pointer-events: none;
+}
+
+/* Show tab bar only on mobile */
+@media (max-width: 1023px) {
+  .tab-bar {
+    display: block;
+    pointer-events: auto;
+  }
+}
+
+/* Hide on desktop */
+@media (min-width: 1024px) {
+  .tab-bar {
+    display: none !important;
+  }
+}
+
+.tab-bar__container {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 28px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: var(--space-2, 8px);
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tab-bar__container {
+    background: rgba(28, 28, 30, 0.88);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* CRITICAL FIX: Ensure horizontal layout */
+.tab-bar__content {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-around;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+
+.tab-bar__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 56px;
+  height: 44px;
+  padding: 4px 12px;
+  border-radius: var(--radius-lg, 18px);
+  color: #8E8E93;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: -0.08px;
+  transition: all 150ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  outline: none;
+  -webkit-appearance: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab-bar__icon {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.8;
+  transition: all 250ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.tab-bar__label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: -0.08px;
+}
+
+.tab-bar__item--active {
+  color: #007AFF;
+  background: rgba(0, 122, 255, 0.1);
+}
+
+.tab-bar__item--active .tab-bar__icon {
+  stroke-width: 2.2;
+}
+
+.tab-bar__item:active {
+  transform: scale(0.9);
+  opacity: 0.7;
+}
+
+/* ==================== HEADER FIX ==================== */
+/* Hide hamburger menu on desktop */
+
+.header {
+  background: var(--bg-primary, #FFFFFF);
+  border-bottom: 1px solid var(--separator, rgba(60, 60, 67, 0.12));
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4, 16px);
+}
+
+@media (min-width: 1024px) {
+  .header {
+    padding: var(--space-5, 20px) var(--space-6, 24px);
+  }
+}
+
+.header-menu-btn {
+  background: transparent;
+  border: none;
+  color: var(--label-primary, #000000);
+  cursor: pointer;
+  padding: var(--space-2, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md, 14px);
+  transition: background 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.header-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* CRITICAL FIX: Hide hamburger menu on desktop */
+@media (min-width: 1024px) {
+  .header-menu-btn {
+    display: none !important;
+  }
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--label-primary, #000000);
+  letter-spacing: -0.4px;
+  margin: 0;
+}
+
+.header-subtitle {
+  font-size: 14px;
+  color: var(--label-secondary, #8E8E93);
+  margin-top: 2px;
+}
+
+/* ==================== SIDEBAR FIX ==================== */
+/* Ensure sidebar only shows on desktop or when menu is open on mobile */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  height: 100dvh;
+  width: 280px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  color: #FFFFFF;
+  padding: var(--space-6, 24px);
+  padding-top: calc(var(--space-6, 24px) + env(safe-area-inset-top, 0px));
+  z-index: 200;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-open {
+  transform: translateX(0);
+}
+
+/* Show sidebar by default on desktop */
+@media (min-width: 1024px) {
+  .sidebar {
+    transform: translateX(0);
+  }
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 199;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.sidebar-open ~ .sidebar-overlay,
+.sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Hide overlay on desktop */
+@media (min-width: 1024px) {
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+.sidebar-close {
+  position: absolute;
+  top: calc(var(--space-6, 24px) + env(safe-area-inset-top, 0px));
+  right: var(--space-6, 24px);
+  color: #FFFFFF;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-2, 8px);
+  border-radius: var(--radius-md, 14px);
+  transition: background 150ms ease;
+}
+
+.sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Hide close button on desktop */
+@media (min-width: 1024px) {
+  .sidebar-close {
+    display: none !important;
+  }
+}
+
+/* ==================== MAIN CONTENT FIX ==================== */
+
+.main-content {
+  flex: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Account for sidebar on desktop */
+@media (min-width: 1024px) {
+  .main-content {
+    margin-left: 280px;
+    padding-bottom: var(--space-6, 24px);
+  }
+}
+
+.content-area {
+  padding: var(--space-4, 16px);
+}
+
+@media (min-width: 1024px) {
+  .content-area {
+    padding: var(--space-6, 24px);
+  }
+}
+
+/* ==================== DASHBOARD LAYOUT FIX ==================== */
+
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ==================== WELCOME HEADER - SINGLE INSTANCE ==================== */
+/* Remove duplicate welcome message - keep only the dashboard one */
+
+.welcome-header {
+  position: relative;
+  background: linear-gradient(145deg, #007AFF 0%, #5856D6 50%, #AF52DE 100%);
+  border-radius: var(--radius-3xl, 36px);
+  padding: var(--space-6, 24px);
+  margin-bottom: var(--space-5, 20px);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 122, 255, 0.24), 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Liquid Glass Highlight Effect */
+.welcome-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.2) 0%, 
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%);
+  border-radius: var(--radius-3xl, 36px) var(--radius-3xl, 36px) 0 0;
+  pointer-events: none;
+}
+
+/* Decorative Glass Orbs */
+.welcome-header::after {
+  content: '';
+  position: absolute;
+  top: -30%;
+  right: -15%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.welcome-header__title,
+.welcome-title {
+  font-size: clamp(22px, 5vw, 28px);
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.5px;
+  margin: 0 0 var(--space-2, 8px) 0;
+  position: relative;
+  z-index: 1;
+}
+
+.welcome-header__subtitle,
+.welcome-subtitle {
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: -0.2px;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Full Width on Mobile */
+@media (max-width: 639px) {
+  .welcome-header {
+    margin-left: calc(-1 * var(--space-4, 16px));
+    margin-right: calc(-1 * var(--space-4, 16px));
+    border-radius: 0 0 var(--radius-3xl, 36px) var(--radius-3xl, 36px);
+    margin-top: calc(-1 * var(--space-4, 16px));
+    padding-top: calc(var(--space-6, 24px) + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* ==================== SAFE AREA FIXES ==================== */
+/* Remove competing safe area rules from body */
+
+body {
+  margin: 0;
+  padding: 0; /* Remove safe area padding from body - let components handle it */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #F2F2F7 0%, #E8F0FE 50%, #EDE7F6 100%);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(135deg, #000000 0%, #1a1a2e 50%, #16213e 100%);
+  }
+}
+
+/* App container handles safe areas */
+.app-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative;
+}
+
+/* ==================== DASHBOARD COMPONENT ==================== */
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 20px);
+}
+
+/* ==================== STATS GRID ==================== */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3, 12px);
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4, 16px);
+  }
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-xl, 22px);
+  padding: var(--space-4, 16px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 250ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  min-width: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .stat-card {
+    background: rgba(28, 28, 30, 0.72);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.stat-card:active {
+  transform: scale(0.96);
+}
+
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg, 18px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-3, 12px);
+}
+
+.stat-icon-blue { background: rgba(0, 122, 255, 0.15); color: #007AFF; }
+.stat-icon-purple { background: rgba(88, 86, 214, 0.15); color: #5856D6; }
+.stat-icon-green { background: rgba(48, 209, 88, 0.15); color: #30D158; }
+.stat-icon-orange { background: rgba(255, 149, 0, 0.15); color: #FF9500; }
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+}
+
+.stat-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #8E8E93;
+  letter-spacing: -0.08px;
+  margin: 0;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--label-primary, #000000);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .stat-value {
+    color: #FFFFFF;
+  }
+}
+
+/* ==================== PRINT STYLES ==================== */
+@media print {
+  .tab-bar,
+  .sidebar,
+  .header-menu-btn,
+  .sidebar-overlay {
+    display: none !important;
+  }
+  
+  .main-content {
+    margin: 0;
+    padding: 0;
+  }
+}

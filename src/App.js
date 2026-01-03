@@ -658,7 +658,7 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, tokenExpiry
 
       {/* Main Content */}
       <div className="main-content">
-        <Header user={user} setIsMenuOpen={setIsMenuOpen} />
+        <Header user={user} setIsMenuOpen={setIsMenuOpen} currentView={currentView} />
         <main className="content-area">
           {currentView === 'dashboard' && <Dashboard token={token} user={user} showNotification={showNotification} checkAndRefreshToken={checkAndRefreshToken} />}
           {currentView === 'upload' && <UploadView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} setTokenExpiry={setTokenExpiry} user={user} checkAndRefreshToken={checkAndRefreshToken} />}
@@ -687,12 +687,25 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
     <>
       {/* Mobile Overlay */}
       {isMenuOpen && (
-        <div className="sidebar-overlay" onClick={() => setIsMenuOpen(false)} />
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsMenuOpen(false)}
+          aria-hidden="true"
+        />
       )}
 
       {/* Sidebar */}
-      <aside className={`sidebar ${isMenuOpen ? 'sidebar-open' : ''}`}>
-        <button className="sidebar-close" onClick={() => setIsMenuOpen(false)}>
+      <aside
+        className={`sidebar ${isMenuOpen ? 'sidebar-open' : ''}`}
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        <button
+          className="sidebar-close"
+          onClick={() => setIsMenuOpen(false)}
+          aria-label="Close navigation menu"
+          type="button"
+        >
           <X className="w-6 h-6" />
         </button>
 
@@ -719,7 +732,12 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
             </div>
           </div>
 
-          <button onClick={() => { haptics.light(); toggleAutoRefresh(); }} className={`auto-refresh-toggle ${autoRefreshEnabled ? 'active' : ''}`}>
+          <button
+            onClick={() => { haptics.light(); toggleAutoRefresh(); }}
+            className={`auto-refresh-toggle ${autoRefreshEnabled ? 'active' : ''}`}
+            type="button"
+            aria-pressed={autoRefreshEnabled}
+          >
             <span className="toggle-label">
               <RefreshCw className="w-3 h-3" />
               Auto-Refresh
@@ -729,7 +747,7 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
         </div>
 
         {/* Navigation */}
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" role="menubar">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
@@ -743,6 +761,9 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
                   setIsMenuOpen(false);
                 }}
                 className={`nav-item ${isActive ? 'nav-item-active' : ''}`}
+                role="menuitem"
+                aria-current={isActive ? 'page' : undefined}
+                type="button"
               >
                 <Icon className="nav-item-icon" />
                 <span className="nav-item-label">{item.label}</span>
@@ -753,7 +774,11 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
         </nav>
 
         {/* Logout */}
-        <button onClick={() => { haptics.medium(); handleLogout(); }} className="sidebar-logout">
+        <button
+          onClick={() => { haptics.medium(); handleLogout(); }}
+          className="sidebar-logout"
+          type="button"
+        >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>
         </button>
@@ -763,15 +788,34 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
 };
 
 // ==================== HEADER COMPONENT ====================
-const Header = ({ user, setIsMenuOpen }) => {
+const Header = ({ user, setIsMenuOpen, currentView }) => {
+  // Get the current page title based on view
+  const getPageTitle = () => {
+    const titles = {
+      dashboard: 'Dashboard',
+      upload: 'Upload Statement',
+      statements: 'Statements',
+      users: 'User Management',
+      changepassword: 'Settings'
+    };
+    return titles[currentView] || 'Dashboard';
+  };
+
   return (
     <header className="header">
-      <button onClick={() => { haptics.light(); setIsMenuOpen(true); }} className="header-menu-btn">
+      <button
+        onClick={() => { haptics.light(); setIsMenuOpen(true); }}
+        className="header-menu-btn"
+        aria-label="Open navigation menu"
+        type="button"
+      >
         <Menu className="w-6 h-6" />
       </button>
       <div className="header-content">
-        <h1 className="header-title">Welcome, {user?.name || user?.username}!</h1>
-        <p className="header-subtitle">Manage your bank statements</p>
+        <h1 className="header-title">{getPageTitle()}</h1>
+        <p className="header-subtitle">
+          {user?.roles?.includes('ROLE_ADMIN') ? 'Administrator' : 'User'} • {user?.name || user?.username}
+        </p>
       </div>
     </header>
   );
@@ -801,12 +845,26 @@ const Dashboard = ({ token, user, showNotification, checkAndRefreshToken }) => {
     });
   }, [token]);
 
+  // Get time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  // Get user's display name (capitalize properly)
+  const getDisplayName = () => {
+    const name = user?.name || user?.username || 'User';
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  };
+
   return (
     <div className="dashboard">
       {/* Welcome Header - iOS 26 Style */}
       <div className="welcome-header">
-        <h1 className="welcome-title">Welcome, {user?.name || user?.username}</h1>
-        <p className="welcome-subtitle">Manage your bank statements efficiently</p>
+        <h1 className="welcome-title">{getGreeting()}, {getDisplayName()}</h1>
+        <p className="welcome-subtitle">Your statement processing overview at a glance</p>
       </div>
 
       {/* Stats Grid - 2 cols mobile, 4 cols desktop */}
