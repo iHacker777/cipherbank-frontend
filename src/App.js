@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key, AlertTriangle, Clock, ArrowUpDown, Calendar } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, TrendingUp, DollarSign, Activity, LogOut, Menu, X, ChevronRight, Download, Search, Filter, Users, Shield, Eye, EyeOff, Copy, RefreshCw, Key, AlertTriangle, Clock, ArrowUpDown, Calendar, Sun, Moon, Smartphone, Palette, Info, User } from 'lucide-react';
 import IOSInstallPrompt from './components/IOSInstallPrompt';
 import BottomTabBar from './components/BottomTabBar';
 import './ios26-liquid-glass.css';
+import './ios26-mobile-fixes.css'; // NEW: Mobile layout fixes and theme support
 import haptics from './utils/ios-haptics';
 
 
@@ -157,6 +158,54 @@ const CipherBankUI = () => {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const credentialsRef = useRef(null);
+
+  // ==================== THEME STATE ====================
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cipherbank_theme') || 'system';
+    }
+    return 'system';
+  });
+
+  // Apply theme effect
+  useEffect(() => {
+    const applyTheme = () => {
+      const root = document.documentElement;
+      root.removeAttribute('data-theme');
+
+      if (theme === 'light') {
+        root.setAttribute('data-theme', 'light');
+      } else if (theme === 'dark') {
+        root.setAttribute('data-theme', 'dark');
+      }
+      // For 'system', no data-theme attribute - CSS media queries handle it
+
+      // Update meta theme-color for browser chrome
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        const isDark = theme === 'dark' ||
+          (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        metaThemeColor.setAttribute('content', isDark ? '#0A84FF' : '#007AFF');
+      }
+    };
+
+    applyTheme();
+
+    // Listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (theme === 'system') applyTheme();
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme]);
+
+  // Handle theme change
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('cipherbank_theme', newTheme);
+    haptics.selection();
+  };
 
   // iOS Detection and Setup
   useEffect(() => {
@@ -399,6 +448,8 @@ const CipherBankUI = () => {
             autoRefreshEnabled={autoRefreshEnabled}
             setAutoRefreshEnabled={setAutoRefreshEnabled}
             credentialsRef={credentialsRef}
+            theme={theme}
+            setTheme={handleThemeChange}
           />
         )}
 
@@ -611,7 +662,7 @@ const LoginView = ({ setCurrentView, setUser, setToken, setTokenExpiry, showNoti
           </form>
 
           <div className="login-footer">
-            <p>CipherBank v2.0</p>
+            <p>CipherBank v3.0</p>
           </div>
         </div>
       </div>
@@ -620,7 +671,7 @@ const LoginView = ({ setCurrentView, setUser, setToken, setTokenExpiry, showNoti
 };
 
 // ==================== DASHBOARD LAYOUT ====================
-const DashboardLayout = ({ currentView, setCurrentView, user, token, tokenExpiry, setUser, setToken, setTokenExpiry, handleLogout, showNotification, isMenuOpen, setIsMenuOpen, checkAndRefreshToken, autoRefreshEnabled, setAutoRefreshEnabled, credentialsRef }) => {
+const DashboardLayout = ({ currentView, setCurrentView, user, token, tokenExpiry, setUser, setToken, setTokenExpiry, handleLogout, showNotification, isMenuOpen, setIsMenuOpen, checkAndRefreshToken, autoRefreshEnabled, setAutoRefreshEnabled, credentialsRef, theme, setTheme }) => {
   useEffect(() => {
     if (!token || !tokenExpiry) {
       setCurrentView('login');
@@ -664,7 +715,24 @@ const DashboardLayout = ({ currentView, setCurrentView, user, token, tokenExpiry
           {currentView === 'upload' && <UploadView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} setTokenExpiry={setTokenExpiry} user={user} checkAndRefreshToken={checkAndRefreshToken} />}
           {currentView === 'statements' && <StatementsView token={token} showNotification={showNotification} checkAndRefreshToken={checkAndRefreshToken} />}
           {currentView === 'users' && <UserManagementView token={token} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} setTokenExpiry={setTokenExpiry} checkAndRefreshToken={checkAndRefreshToken} />}
-          {currentView === 'changepassword' && <ChangePasswordView token={token} user={user} showNotification={showNotification} setCurrentView={setCurrentView} setUser={setUser} setToken={setToken} setTokenExpiry={setTokenExpiry} checkAndRefreshToken={checkAndRefreshToken} />}
+          {currentView === 'changepassword' && (
+            <SettingsView
+              token={token}
+              user={user}
+              showNotification={showNotification}
+              setCurrentView={setCurrentView}
+              setUser={setUser}
+              setToken={setToken}
+              setTokenExpiry={setTokenExpiry}
+              checkAndRefreshToken={checkAndRefreshToken}
+              autoRefreshEnabled={autoRefreshEnabled}
+              setAutoRefreshEnabled={setAutoRefreshEnabled}
+              handleLogout={handleLogout}
+              credentialsRef={credentialsRef}
+              theme={theme}
+              setTheme={setTheme}
+            />
+          )}
         </main>
       </div>
     </div>
@@ -788,6 +856,8 @@ const Sidebar = ({ currentView, setCurrentView, user, handleLogout, isMenuOpen, 
 };
 
 // ==================== HEADER COMPONENT ====================
+// NOTE: This header is HIDDEN on mobile via CSS (ios26-mobile-fixes.css)
+// On mobile, the welcome card serves as the header, navigation is via bottom tab bar
 const Header = ({ user, setIsMenuOpen, currentView }) => {
   // Get the current page title based on view
   const getPageTitle = () => {
@@ -863,6 +933,7 @@ const Dashboard = ({ token, user, showNotification, checkAndRefreshToken }) => {
     <div className="dashboard">
       {/* Welcome Header - iOS 26 Style */}
       <div className="welcome-header">
+        <div className="welcome-orb" aria-hidden="true"></div>
         <h1 className="welcome-title">{getGreeting()}, {getDisplayName()}</h1>
         <p className="welcome-subtitle">Your statement processing overview at a glance</p>
       </div>
@@ -1470,15 +1541,75 @@ const UserManagementView = ({ token, showNotification, setCurrentView, setUser, 
   );
 };
 
-// ==================== CHANGE PASSWORD VIEW ====================
-const ChangePasswordView = ({ token, user, showNotification, setCurrentView, setUser, setToken, setTokenExpiry, checkAndRefreshToken }) => {
-  const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+// ==================== SETTINGS VIEW (iOS 26 STYLE) ====================
+// Replaces ChangePasswordView with full settings including Appearance
+const SettingsView = ({
+  token,
+  user,
+  showNotification,
+  setCurrentView,
+  setUser,
+  setToken,
+  setTokenExpiry,
+  checkAndRefreshToken,
+  autoRefreshEnabled,
+  setAutoRefreshEnabled,
+  handleLogout,
+  credentialsRef,
+  theme,
+  setTheme
+}) => {
+  const [showAppearancePicker, setShowAppearancePicker] = useState(false);
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: ''
+  });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [changing, setChanging] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
+  // Haptics state
+  const [hapticsEnabled, setHapticsEnabled] = useState(() => {
+    const saved = localStorage.getItem('cipherbank_haptics');
+    return saved !== 'false'; // Default to true
+  });
+
+  // Get resolved theme for display
+  const resolvedTheme = theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme;
+
+  // Toggle haptics
+  const toggleHaptics = (enabled) => {
+    setHapticsEnabled(enabled);
+    localStorage.setItem('cipherbank_haptics', enabled.toString());
+    if (enabled) {
+      haptics.enable();
+      haptics.success();
+    } else {
+      haptics.disable();
+    }
+  };
+
+  // Toggle auto-refresh
+  const toggleAutoRefresh = () => {
+    if (autoRefreshEnabled) {
+      setAutoRefreshEnabled(false);
+      if (credentialsRef) credentialsRef.current = null;
+      localStorage.removeItem('cipherbank_credentials');
+      showNotification('Auto-refresh disabled', 'info');
+    } else {
+      showNotification('Please re-login to enable auto-refresh', 'info');
+    }
+    haptics.selection();
+  };
+
+  // Password strength calculation
   const calculatePasswordStrength = (password) => {
     let strength = 0;
     if (password.length >= 8) strength += 25;
@@ -1494,27 +1625,34 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
     setPasswordStrength(calculatePasswordStrength(passwordData.newPassword));
   }, [passwordData.newPassword]);
 
+  // Handle password change
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    haptics.medium();
 
     if (!passwordData.currentPassword) {
       showNotification('Enter current password', 'error');
+      haptics.error();
       return;
     }
     if (passwordData.newPassword.length < CONFIG.PASSWORD_MIN_LENGTH) {
       showNotification(`New password must be at least ${CONFIG.PASSWORD_MIN_LENGTH} characters`, 'error');
+      haptics.error();
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmNewPassword) {
       showNotification('Passwords do not match', 'error');
+      haptics.error();
       return;
     }
     if (passwordStrength < 40) {
       showNotification('Password is too weak', 'error');
+      haptics.error();
       return;
     }
     if (passwordData.currentPassword === passwordData.newPassword) {
       showNotification('New password must be different', 'error');
+      haptics.error();
       return;
     }
 
@@ -1539,133 +1677,391 @@ const ChangePasswordView = ({ token, user, showNotification, setCurrentView, set
       const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
+        haptics.success();
         showNotification('Password changed successfully!', 'success');
         setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+      } else if (response.status === 401) {
+        haptics.error();
+        localStorage.removeItem('cipherbank_token');
+        localStorage.removeItem('cipherbank_user');
+        localStorage.removeItem('cipherbank_token_expiry');
+        setToken(null);
+        setUser(null);
+        setTokenExpiry(null);
+        setCurrentView('login');
+        showNotification('Session expired. Please login again.', 'error');
       } else {
-        showNotification(data?.message || 'Failed to change password', 'error');
+        haptics.error();
+        showNotification(data.message || 'Failed to change password', 'error');
       }
     } catch (error) {
-      showNotification('Failed to change password', 'error');
+      haptics.error();
+      showNotification('Network error. Please try again.', 'error');
     } finally {
       setChanging(false);
     }
   };
 
+  const getStrengthClass = (strength) => {
+    if (strength < 40) return 'weak';
+    if (strength < 70) return 'medium';
+    return 'strong';
+  };
+
+  const getStrengthText = (strength) => {
+    if (strength < 40) return 'Weak';
+    if (strength < 70) return 'Medium';
+    return 'Strong';
+  };
+
+  const getThemeLabel = () => {
+    switch (theme) {
+      case 'light': return 'Light';
+      case 'dark': return 'Dark';
+      default: return 'System';
+    }
+  };
+
   return (
-    <div className="change-password-view">
-      <div className="lg-card">
-        <div className="card-header-with-icon">
-          <div className="header-icon indigo">
-            <Key className="w-8 h-8" />
-          </div>
-          <div>
-            <h2 className="card-title-lg">Change Password</h2>
-            <p className="card-subtitle">Update your account password</p>
-          </div>
+    <div className="settings-view" style={{ padding: 'var(--space-4, 16px)' }}>
+      {/* User Info Banner */}
+      <div className="user-info-banner" style={{ marginBottom: 'var(--space-6, 24px)' }}>
+        <div className="user-avatar">
+          <User className="w-5 h-5" />
         </div>
-
-        <div className="user-info-banner">
-          <div className="user-avatar"><Users className="w-5 h-5" /></div>
-          <div>
-            <p className="user-label">Changing password for</p>
-            <p className="user-name">{user?.name || user?.username}</p>
-          </div>
+        <div>
+          <p className="user-label">Signed in as</p>
+          <p className="user-name">{user?.name || user?.username || 'User'}</p>
         </div>
+      </div>
 
-        <form onSubmit={handleChangePassword} className="password-form">
-          <div className="form-section">
-            <label className="form-label">Current Password <span className="required">*</span></label>
-            <div className="input-with-actions">
-              <input
-                type={showCurrentPassword ? 'text' : 'password'}
-                value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                placeholder="Enter current password"
-                className="lg-input"
-                required
-              />
-              <button type="button" onClick={() => { haptics.light(); setShowCurrentPassword(!showCurrentPassword); }} className="input-action">
-                {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          <div className="form-section">
-            <div className="form-label-row">
-              <label className="form-label">New Password <span className="required">*</span></label>
-              <button type="button" onClick={() => {
-                const pwd = generateSecurePassword();
-                setPasswordData({ ...passwordData, newPassword: pwd, confirmNewPassword: pwd });
-                showNotification('Password generated!', 'success');
-              }} className="generate-btn">
-                <RefreshCw className="w-4 h-4" /> Generate
-              </button>
-            </div>
-            <div className="input-with-actions">
-              <input
-                type={showNewPassword ? 'text' : 'password'}
-                value={passwordData.newPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                placeholder="Enter new password"
-                className="lg-input"
-                required
-              />
-              <button type="button" onClick={() => { haptics.light(); navigator.clipboard.writeText(passwordData.newPassword); showNotification('Copied!', 'success'); }} className="input-action"><Copy className="w-5 h-5" /></button>
-              <button type="button" onClick={() => { haptics.light(); setShowNewPassword(!showNewPassword); }} className="input-action">
-                {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-            {passwordData.newPassword && (
-              <div className="password-strength">
-                <div className="strength-bar">
-                  <div className={`strength-fill ${passwordStrength < 40 ? 'weak' : passwordStrength < 70 ? 'medium' : 'strong'}`} style={{ width: `${passwordStrength}%` }}></div>
+      {/* Appearance Section */}
+      <div className="settings-section">
+        <div className="settings-section-title">Appearance</div>
+        <div className="settings-group">
+          <button
+            type="button"
+            className="settings-item"
+            onClick={() => {
+              haptics.light();
+              setShowAppearancePicker(true);
+            }}
+          >
+            <div className="settings-item-left">
+              <div className="settings-item-icon purple">
+                <Palette className="w-5 h-5" />
+              </div>
+              <div className="settings-item-content">
+                <div className="settings-item-title">Theme</div>
+                <div className="settings-item-subtitle">
+                  {theme === 'system'
+                    ? `System (${resolvedTheme === 'dark' ? 'Dark' : 'Light'})`
+                    : getThemeLabel()}
                 </div>
-                <span className={`strength-text ${passwordStrength < 40 ? 'weak' : passwordStrength < 70 ? 'medium' : 'strong'}`}>
-                  {passwordStrength < 40 ? 'Weak' : passwordStrength < 70 ? 'Medium' : 'Strong'}
-                </span>
               </div>
-            )}
-          </div>
+            </div>
+            <div className="settings-item-right">
+              <span className="settings-item-value">{getThemeLabel()}</span>
+              <ChevronRight className="w-5 h-5 settings-item-chevron" />
+            </div>
+          </button>
 
-          <div className="form-section">
-            <label className="form-label">Confirm New Password <span className="required">*</span></label>
-            <div className="input-with-actions">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={passwordData.confirmNewPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, confirmNewPassword: e.target.value })}
-                placeholder="Confirm new password"
-                className="lg-input"
-                required
-              />
-              <button type="button" onClick={() => { haptics.light(); setShowConfirmPassword(!showConfirmPassword); }} className="input-action">
-                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          <div className="settings-item">
+            <div className="settings-item-left">
+              <div className="settings-item-icon orange">
+                <Smartphone className="w-5 h-5" />
+              </div>
+              <div className="settings-item-content">
+                <div className="settings-item-title">Haptic Feedback</div>
+                <div className="settings-item-subtitle">Vibration on interactions</div>
+              </div>
+            </div>
+            <div className="settings-item-right">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={hapticsEnabled}
+                className={`ios-toggle ${hapticsEnabled ? 'active' : ''}`}
+                onClick={() => {
+                  haptics.selection();
+                  toggleHaptics(!hapticsEnabled);
+                }}
+              >
+                <span className="ios-toggle-thumb" />
               </button>
             </div>
-            {passwordData.confirmNewPassword && (
-              <div className={`password-match ${passwordData.newPassword === passwordData.confirmNewPassword ? 'match' : 'no-match'}`}>
-                {passwordData.newPassword === passwordData.confirmNewPassword ? <><CheckCircle className="w-4 h-4" /> Passwords match</> : <><XCircle className="w-4 h-4" /> Passwords don't match</>}
-              </div>
-            )}
-          </div>
-
-          <button type="submit" disabled={changing || passwordStrength < 40} className={`lg-btn lg-btn-primary w-full ${changing || passwordStrength < 40 ? 'disabled' : ''}`}>
-            {changing ? <><span className="spinner"></span> Changing...</> : 'Change Password'}
-          </button>
-        </form>
-
-        <div className="security-tips">
-          <Shield className="tips-icon" />
-          <div>
-            <p className="tips-title">Security Tips</p>
-            <ul className="tips-list">
-              <li>Use a unique password</li>
-              <li>Consider a password manager</li>
-              <li>Change regularly</li>
-            </ul>
           </div>
         </div>
       </div>
+
+      {/* Session Section */}
+      <div className="settings-section">
+        <div className="settings-section-title">Session</div>
+        <div className="settings-group">
+          <div className="settings-item">
+            <div className="settings-item-left">
+              <div className="settings-item-icon green">
+                <RefreshCw className="w-5 h-5" />
+              </div>
+              <div className="settings-item-content">
+                <div className="settings-item-title">Auto-Refresh Token</div>
+                <div className="settings-item-subtitle">Stay signed in automatically</div>
+              </div>
+            </div>
+            <div className="settings-item-right">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={autoRefreshEnabled}
+                className={`ios-toggle ${autoRefreshEnabled ? 'active' : ''}`}
+                onClick={toggleAutoRefresh}
+              >
+                <span className="ios-toggle-thumb" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Security Section - Password Change */}
+      <div className="settings-section">
+        <div className="settings-section-title">Security</div>
+        <div className="settings-group" style={{ padding: 'var(--space-5, 20px)' }}>
+          <form onSubmit={handleChangePassword} className="password-form">
+            {/* Current Password */}
+            <div className="form-group">
+              <label className="form-label">Current Password</label>
+              <div className="input-wrapper">
+                <div className="input-icon"><Key className="w-5 h-5" /></div>
+                <input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                  placeholder="Enter current password"
+                  className="lg-input"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptics.light();
+                    setShowCurrentPassword(!showCurrentPassword);
+                  }}
+                  className="input-action"
+                  aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* New Password */}
+            <div className="form-group">
+              <label className="form-label">New Password</label>
+              <div className="input-wrapper">
+                <div className="input-icon"><Shield className="w-5 h-5" /></div>
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  placeholder="Enter new password"
+                  className="lg-input"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptics.light();
+                    setShowNewPassword(!showNewPassword);
+                  }}
+                  className="input-action"
+                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+
+              {/* Password Strength */}
+              {passwordData.newPassword && (
+                <div className="password-strength">
+                  <div className="strength-bar">
+                    <div
+                      className={`strength-fill ${getStrengthClass(passwordStrength)}`}
+                      style={{ width: `${passwordStrength}%` }}
+                    />
+                  </div>
+                  <span className={`strength-text ${getStrengthClass(passwordStrength)}`}>
+                    {getStrengthText(passwordStrength)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div className="form-group">
+              <label className="form-label">Confirm New Password</label>
+              <div className="input-wrapper">
+                <div className="input-icon"><Shield className="w-5 h-5" /></div>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={passwordData.confirmNewPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, confirmNewPassword: e.target.value })}
+                  placeholder="Confirm new password"
+                  className="lg-input"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptics.light();
+                    setShowConfirmPassword(!showConfirmPassword);
+                  }}
+                  className="input-action"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+
+              {/* Password Match Indicator */}
+              {passwordData.confirmNewPassword && (
+                <div className={`password-match ${passwordData.newPassword === passwordData.confirmNewPassword ? 'match' : 'no-match'}`}>
+                  {passwordData.newPassword === passwordData.confirmNewPassword
+                    ? <><CheckCircle className="w-4 h-4" /> Passwords match</>
+                    : <><XCircle className="w-4 h-4" /> Passwords don't match</>
+                  }
+                </div>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={changing || passwordStrength < 40}
+              className={`lg-btn lg-btn-primary w-full ${changing || passwordStrength < 40 ? 'disabled' : ''}`}
+            >
+              {changing ? (
+                <>
+                  <span className="spinner"></span> Changing Password...
+                </>
+              ) : 'Change Password'}
+            </button>
+          </form>
+
+          {/* Security Tips */}
+          <div className="security-tips">
+            <AlertTriangle className="tips-icon" />
+            <div>
+              <div className="tips-title">Security Tips</div>
+              <ul className="tips-list">
+                <li>• Use a unique password for each account</li>
+                <li>• Include letters, numbers & symbols</li>
+                <li>• Avoid personal information</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* About Section */}
+      <div className="settings-section">
+        <div className="settings-section-title">About</div>
+        <div className="settings-group">
+          <div className="settings-item">
+            <div className="settings-item-left">
+              <div className="settings-item-icon gray">
+                <Info className="w-5 h-5" />
+              </div>
+              <div className="settings-item-content">
+                <div className="settings-item-title">CipherBank</div>
+                <div className="settings-item-subtitle">Version 3.0.0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sign Out Button */}
+      <div className="settings-section" style={{ marginTop: 'var(--space-8, 32px)' }}>
+        <button
+          type="button"
+          onClick={() => {
+            haptics.medium();
+            handleLogout();
+          }}
+          className="lg-btn w-full"
+          style={{
+            background: 'rgba(255, 59, 48, 0.1)',
+            color: 'var(--system-red, #FF3B30)',
+            border: 'none'
+          }}
+        >
+          <LogOut className="w-5 h-5" />
+          Sign Out
+        </button>
+      </div>
+
+      {/* Appearance Picker Modal */}
+      {showAppearancePicker && (
+        <div className="appearance-picker">
+          <div
+            className="appearance-picker-backdrop"
+            onClick={() => setShowAppearancePicker(false)}
+            aria-hidden="true"
+          />
+          <div className="appearance-picker-content" role="dialog" aria-modal="true" aria-labelledby="appearance-title">
+            <div className="appearance-picker-header">
+              <h2 id="appearance-title" className="appearance-picker-title">Appearance</h2>
+              <button
+                className="appearance-picker-close"
+                onClick={() => setShowAppearancePicker(false)}
+                aria-label="Close"
+                type="button"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="appearance-picker-options">
+              {[
+                { id: 'system', label: 'System', icon: Smartphone },
+                { id: 'light', label: 'Light', icon: Sun },
+                { id: 'dark', label: 'Dark', icon: Moon }
+              ].map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setTheme(id);
+                    setShowAppearancePicker(false);
+                  }}
+                  className={`appearance-option ${theme === id ? 'selected' : ''}`}
+                  type="button"
+                  aria-pressed={theme === id}
+                >
+                  <div className={`appearance-option-icon ${id}`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <span className="appearance-option-label">{label}</span>
+                  {theme === id && (
+                    <CheckCircle className="w-5 h-5" style={{ color: 'var(--system-blue)' }} />
+                  )}
+                </button>
+              ))}
+            </div>
+            <div style={{
+              padding: 'var(--space-4, 16px)',
+              paddingTop: 0,
+              fontSize: '13px',
+              color: 'var(--label-secondary)',
+              textAlign: 'center'
+            }}>
+              {theme === 'system'
+                ? 'Appearance will match your device settings'
+                : `${theme.charAt(0).toUpperCase() + theme.slice(1)} mode is always on`
+              }
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
